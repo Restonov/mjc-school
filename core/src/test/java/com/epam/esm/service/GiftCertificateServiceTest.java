@@ -1,7 +1,5 @@
 package com.epam.esm.service;
 
-import static org.mockito.Mockito.*;
-
 import com.epam.esm.dao.GiftCertificateDao;
 import com.epam.esm.dao.GiftCertificateTagDao;
 import com.epam.esm.dao.impl.GiftCertificateDaoImpl;
@@ -9,126 +7,187 @@ import com.epam.esm.dao.impl.GiftCertificateTagDaoImpl;
 import com.epam.esm.entity.GiftCertificate;
 import com.epam.esm.entity.GiftCertificateTag;
 import com.epam.esm.service.impl.GiftCertificateServiceImpl;
-import org.junit.jupiter.api.*;
+import com.epam.esm.util.QueryGenerator;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class GiftCertificateServiceTest {
-    GiftCertificateService service;
-    GiftCertificateDao certDao;
-    GiftCertificateTagDao tagDao;
-    GiftCertificate certificate1;
-    GiftCertificate certificate2;
-    GiftCertificateTag tag;
-    List<GiftCertificate> certificates;
-    List<GiftCertificateTag> tags;
+    private GiftCertificateService service;
+    private GiftCertificateDao certDao;
+    private GiftCertificateTagDao tagDao;
+    private GiftCertificate certificate;
+    private GiftCertificate certificate2;
+    private GiftCertificateTag tag;
+    private Set<GiftCertificateTag> tags;
+    private Set<GiftCertificate> tagCertificates;
+    private List<GiftCertificate> certificates;
 
     @BeforeAll
     void setUp() {
         certDao = mock(GiftCertificateDaoImpl.class);
         tagDao = mock(GiftCertificateTagDaoImpl.class);
         service = new GiftCertificateServiceImpl(certDao, tagDao);
-
-        certificate1 = new GiftCertificate(
-                101, "cer1",
-                LocalDateTime.of(2021, 1, 13, 9, 15)
-        );
-        certificate2 = new GiftCertificate(
-                202, "cer2",
-                LocalDateTime.of(2021, 2, 15, 13, 27)
-        );
-
-        tag = new GiftCertificateTag(1, "testTag");
-
-        certificates = new ArrayList<>();
-        certificates.add(certificate1);
-        certificates.add(certificate2);
-        tags = new ArrayList<>();
-        tags.add(tag);
     }
 
     @AfterAll
     void tearDown() {
         certDao = null;
         tagDao = null;
-        certificate1 = null;
+        certificate = null;
         certificate2 = null;
+        tagCertificates = null;
         tag = null;
-        certificates = null;
         tags = null;
         service = null;
     }
 
+    @BeforeEach
+    void setUpCert() {
+        certificate = new GiftCertificate("Test cert",
+                "Cert for test purpose", new BigDecimal(100), 30);
+        tag = new GiftCertificateTag(1, "testTag");
+        tagCertificates = new HashSet<>();
+        tag.setCertificates(tagCertificates);
+        tags = new HashSet<>();
+        tags.add(tag);
+        certificate.setTags(tags);
+    }
+
     @Test
     void createCertificatePositiveTest() {
-        when(certDao.add(certificate1)).thenReturn(certificate1);
+        when(certDao.add(certificate)).thenReturn(certificate);
+        when(tagDao.findByName(tag.getName())).thenReturn(Optional.of(tag));
+        when(tagDao.add(tag)).thenReturn(tag);
 
-        GiftCertificate expectedCert = service.create(certificate1);
-        verify(certDao).add(certificate1);
+        GiftCertificate expectedCert = service.create(certificate);
+        verify(certDao).add(certificate);
         Assertions.assertNotNull(expectedCert);
     }
 
-    @Test
-    void findAllPositiveTest() {
-        when(certDao.findAll()).thenReturn(certificates);
-        when(tagDao.findByCertificateId(certificate1.getCertificateId()))
-                .thenReturn(tags);
-        when(tagDao.findByCertificateId(certificate2.getCertificateId()))
-                .thenReturn(tags);
+    @BeforeEach
+    void setUpCertificates() {
+        certificates = new ArrayList<>();
+        certificate = new GiftCertificate("Test cert",
+                "Cert for test purpose", new BigDecimal(100), 30,
+                LocalDateTime.now(), LocalDateTime.now(), new HashSet<>()
+        );
+        certificates.add(certificate);
+    }
 
-        List<GiftCertificate> expected = service.findAll();
-        verify(certDao).findAll();
-        verify(tagDao).findByCertificateId(certificate1.getCertificateId());
-        verify(tagDao).findByCertificateId(certificate2.getCertificateId());
-        Assertions.assertFalse(expected.isEmpty());
+
+    @Test
+    void findAllTest() {
+        when(certDao.findAll(1, GiftCertificate.class)).thenReturn(certificates);
+
+        List<GiftCertificate> actual = service.findAll(1);
+        verify(certDao).findAll(1, GiftCertificate.class);
+        Assertions.assertFalse(actual.isEmpty());
+    }
+
+    @BeforeEach
+    void setUpSortCertificates() {
+        certificates = new ArrayList<>();
+        certificate = new GiftCertificate("Test cert",
+                "Cert for test purpose", new BigDecimal(100), 30,
+                LocalDateTime.now(), LocalDateTime.now(), new HashSet<>()
+        );
+        certificate2 = new GiftCertificate("X Test cert",
+                "Cert for test purpose", new BigDecimal(100), 30,
+                LocalDateTime.now(), LocalDateTime.now(), new HashSet<>()
+        );
+        certificates.add(certificate);
+        certificates.add(certificate2);
     }
 
     @Test
-    void findByIdPositiveTest() {
-        long id = 101;
-        when(certDao.findById(id)).thenReturn(Optional.of(certificate1));
-        when(tagDao.findByCertificateId(id)).thenReturn(tags);
+    void findAllAndSortTest() {
+        when(certDao.findAllAndSort(1, "name_asc")).thenReturn(certificates);
 
-        Optional<GiftCertificate> optional = service.findById(id);
-        verify(certDao).findById(id);
-        verify(tagDao).findByCertificateId(id);
-        Assertions.assertTrue(optional.isPresent());
+        List<GiftCertificate> actual = service.findAllAndSort(1, "name_asc");
+        verify(certDao).findAllAndSort(1, "name_asc");
+        Assertions.assertEquals("Test cert" , actual.get(0).getName());
+    }
+
+    @BeforeEach
+    void setUpCertWithId() {
+        certificate = new GiftCertificate("Test cert",
+                "Cert for test purpose", new BigDecimal(100), 30,
+                LocalDateTime.now(), LocalDateTime.now(), new HashSet<>()
+        );
+        certificate.setId(3);
     }
 
     @Test
-    void findByTagNamePositiveTest() {
-        String tagName = "testTag";
-        long tagId = 1;
-        when(tagDao.findByName(tagName)).thenReturn(Optional.of(tag));
-        when(certDao.findByTagId(tagId)).thenReturn(certificates);
+    void findByIdTest() {
+        when(certDao.findById(3)).thenReturn(Optional.of(certificate));
 
-        List<GiftCertificate> certificates = service.findByTagName(tagName);
-        verify(tagDao).findByName(tagName);
-        verify(certDao).findByTagId(tagId);
+        GiftCertificate actualCert = service.findById(3);
+        verify(certDao).findById(3);
+        Assertions.assertNotNull(actualCert);
+    }
+
+    @BeforeEach
+    void setUpCertWithTag() {
+        certificates = new ArrayList<>();
+        certificate = new GiftCertificate("Test cert",
+                "Cert for test purpose", new BigDecimal(100), 30,
+                LocalDateTime.now(), LocalDateTime.now(), new HashSet<>()
+        );
+        certificates.add(certificate);
+        tags = new HashSet<>();
+        tag = new GiftCertificateTag(1, "test");
+        tags.add(tag);
+    }
+
+    @Test
+    void findByTagNameTest() {
+        when(tagDao.findByName("test")).thenReturn(Optional.of(tag));
+        when(certDao.findByTags(1, tags)).thenReturn(certificates);
+
+        List<GiftCertificate> certificates = service.findByTagNames(1, "test");
+        verify(certDao).findByTags(1, tags);
         Assertions.assertFalse(certificates.isEmpty());
     }
 
-    @Test
-    void updatePositiveTest() {
-        long certId = 101;
-        when(certDao.findById(certId)).thenReturn(Optional.of(certificate1));
-        doNothing().when(certDao).update(certificate1);
-
-        service.update(certificate1, certId);
-        verify(certDao).findById(certId);
-        verify(certDao).update(certificate1);
+    @BeforeEach
+    void setUpCertWithKeyWord() {
+        certificates = new ArrayList<>();
+        certificate = new GiftCertificate("Test cert",
+                "Cert for test purpose", new BigDecimal(100), 30,
+                LocalDateTime.now(), LocalDateTime.now(), new HashSet<>()
+        );
+        certificates.add(certificate);
     }
 
     @Test
-    void deletePositiveTest() {
-        long certId = 101;
-        doNothing().when(certDao).delete(certId);
+    void findByKeyWord() {
+        when(certDao.findByKeyword(1, QueryGenerator.generateKeyWord("test"))).thenReturn(certificates);
 
-        service.delete(certId);
-        verify(certDao).delete(certId);
+        List<GiftCertificate> actualCerts = service.findByKeyWord(1, "test");
+        verify(certDao).findByKeyword(1, QueryGenerator.generateKeyWord("test"));
+        Assertions.assertFalse(actualCerts.isEmpty());
+    }
+
+    @Test
+    void deleteTest() {
+        when(certDao.delete(1)).thenReturn(true);
+        Assertions.assertTrue(service.delete(1));
     }
 }

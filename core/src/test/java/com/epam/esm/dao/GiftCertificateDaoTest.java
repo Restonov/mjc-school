@@ -2,8 +2,15 @@ package com.epam.esm.dao;
 
 import com.epam.esm.config.JUnitConfig;
 import com.epam.esm.entity.GiftCertificate;
+import com.epam.esm.entity.GiftCertificateTag;
+import com.epam.esm.exception.ResourceNotFoundException;
 import org.flywaydb.core.Flyway;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
@@ -11,65 +18,86 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
-@ActiveProfiles(profiles = "qa")
 @Transactional
+@ActiveProfiles(profiles = "qa")
 @SpringJUnitConfig(JUnitConfig.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class GiftCertificateDaoTest {
     private GiftCertificate certificate;
+    private Set<GiftCertificateTag> tags;
 
     @Autowired
-    GiftCertificateDao dao;
+    private GiftCertificateDao certificateDao;
 
     @Autowired
-    Flyway flyway;
+    private GiftCertificateTagDao tagDao;
+
+    @Autowired
+    private Flyway flyway;
 
     @BeforeAll
     void setUp() {
         flyway.migrate();
-        certificate = new GiftCertificate(
-                "cer1", "Test cert", BigDecimal.valueOf(150), 30,
-                LocalDateTime.of(2021, 1, 13, 9, 15),
-                LocalDateTime.of(2021, 1, 13, 9, 15)
-        );
+        Set<GiftCertificateTag> tags = new HashSet<>();
+        tags.add(new GiftCertificateTag("testTag"));
+        certificate = new GiftCertificate("cer1",
+                "Test cert", BigDecimal.valueOf(150),
+                30, LocalDateTime.now(), LocalDateTime.now(), tags);
     }
 
     @AfterAll
-    void tearDown() {
+    void tierDown() {
         certificate = null;
+        tags = null;
     }
 
     @Test
     void addCertificateTest() {
-        GiftCertificate expected = dao.add(certificate);
+        GiftCertificate expected = certificateDao.add(certificate);
         Assertions.assertEquals(certificate.getName(), expected.getName());
     }
 
     @Test
     void findAllTest() {
-        List<GiftCertificate> certificates = dao.findAll();
-        Assertions.assertEquals("Zara", certificates.get(0).getName());
+        List<GiftCertificate> certificates = certificateDao.findAll(1, GiftCertificate.class);
+        Assertions.assertFalse(certificates.isEmpty());
     }
 
     @Test
     void findByIdTest() {
-        Optional<GiftCertificate> certificate = dao.findById(10);
-        Assertions.assertTrue(certificate.isPresent()
-                && certificate.get().getName().equals("TyRent"));
+        Optional<GiftCertificate> optional = certificateDao.findById(10);
+        Assertions.assertEquals("TyRent",
+                optional.orElseThrow(ResourceNotFoundException::new).getName());
+    }
+
+    @BeforeEach
+    void setUpTags() {
+        tags = new HashSet<>();
+        Optional<GiftCertificateTag> optionalTravelTag = tagDao.findByName("travel");
+        optionalTravelTag.ifPresent(giftCertificateTag -> tags.add(giftCertificateTag));
+        Optional<GiftCertificateTag> optionalHobbyTag = tagDao.findByName("hobby");
+        optionalHobbyTag.ifPresent(giftCertificateTag -> tags.add(giftCertificateTag));
     }
 
     @Test
-    void findByTagId() {
-        List<GiftCertificate> certificates = dao.findByTagId(2);
-        Assertions.assertFalse(certificates.isEmpty());
+    void findByTagNameTest() {
+        List<GiftCertificate> certificates = certificateDao.findByTags(1, tags);
+        Assertions.assertEquals("TyRent", certificates.get(0).getName());
     }
 
     @Test
     void findByKeywordTest() {
-        List<GiftCertificate> certificates = dao.findByKeyword("%ar%");
-        Assertions.assertFalse(certificates.isEmpty());
+        List<GiftCertificate> certificates = certificateDao.findByKeyword(1,"%rent%");
+        Assertions.assertEquals("TyRent", certificates.get(0).getName());
+    }
+
+    @Test
+    void deleteTest() {
+        Assertions.assertTrue(certificateDao.delete(2));
     }
 }

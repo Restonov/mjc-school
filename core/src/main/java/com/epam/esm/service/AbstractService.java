@@ -1,8 +1,13 @@
 package com.epam.esm.service;
 
-import java.util.List;
-import java.util.Optional;
+import com.epam.esm.dao.GiftCertificateDao;
+import com.epam.esm.dao.GiftCertificateTagDao;
+import com.epam.esm.dao.UserDao;
+import com.epam.esm.dao.UserOrderDao;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 
+import java.util.List;
 
 /**
  * Abstract service
@@ -10,6 +15,17 @@ import java.util.Optional;
  * @param <T> the type parameter
  */
 public abstract class AbstractService<T> {
+
+    @Autowired
+    protected GiftCertificateDao certificateDao;
+    @Autowired
+    protected GiftCertificateTagDao tagDao;
+    @Autowired
+    protected UserDao userDao;
+    @Autowired
+    protected UserOrderDao orderDao;
+    @Autowired
+    protected ObjectMapper objectMapper;
 
     /**
      * Create resource
@@ -24,7 +40,7 @@ public abstract class AbstractService<T> {
      *
      * @return resource
      */
-    public abstract List<T> findAll();
+    public abstract List<T> findAll(int page);
 
     /**
      * Find resource by id
@@ -32,13 +48,13 @@ public abstract class AbstractService<T> {
      * @param id the id
      * @return optional resource
      */
-    public abstract Optional<T> findById(long id);
+    public abstract T findById(long id);
 
     /**
      * Delete resource by id
      *
      * @param id resource id
      */
-    public abstract void delete(long id);
+    public abstract boolean delete(long id);
 }
 

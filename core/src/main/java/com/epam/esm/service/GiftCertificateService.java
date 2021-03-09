@@ -1,24 +1,14 @@
 package com.epam.esm.service;
 
-import com.epam.esm.dao.GiftCertificateDao;
-import com.epam.esm.dao.GiftCertificateTagDao;
 import com.epam.esm.entity.GiftCertificate;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.github.fge.jsonpatch.JsonPatch;
 
 import java.util.List;
-
 
 /**
  * Gift certificate service.
  */
-@AllArgsConstructor
-@NoArgsConstructor
 public abstract class GiftCertificateService extends AbstractService<GiftCertificate> {
-
-    @Autowired protected GiftCertificateDao certDao;
-    @Autowired protected GiftCertificateTagDao tagDao;
 
     /**
      * Find certificates by keyWord
@@ -26,30 +16,30 @@ public abstract class GiftCertificateService extends AbstractService<GiftCertifi
      * @param keyWord certificate name or description
      * @return certificates, containing keyword
      */
-    public abstract List<GiftCertificate> findByKeyWord(String keyWord);
-
-    /**
-     * Find all certificates and sort with comparator
-     *
-     * @param sortBy name or creation date
-     * @param orderBy ascending or descending
-     * @return sorted certificates
-     */
-    public abstract List<GiftCertificate> findAllAndSort(String sortBy, String orderBy);
+    public abstract List<GiftCertificate> findByKeyWord(int page, String keyWord);
 
     /**
      * Find all certificates with received Tag
      *
-     * @param tagName name of the Tag
+     * @param tagNames name of the Tags
      * @return certificates
      */
-    public abstract List<GiftCertificate> findByTagName(String tagName);
+    public abstract List<GiftCertificate> findByTagNames(int page, String... tagNames);
+
+    /**
+     * Find all Certificates in sorted order
+     *
+     * @param page page in URL
+     * @param sort name/description asc/desc
+     * @return Certificates
+     */
+    public abstract List<GiftCertificate> findAllAndSort(int page, String sort);
 
     /**
      * Update certificate
      *
-     * @param certificate Certificate
-     * @param id Certificate id
+     * @param patch JsonPatch patch
+     * @param id    Certificate id
      */
-    public abstract void update(GiftCertificate certificate, long id);
+    public abstract GiftCertificate update(long id, JsonPatch patch);
 }

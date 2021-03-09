@@ -1,8 +1,10 @@
 package com.epam.esm.dao;
 
 import com.epam.esm.entity.GiftCertificate;
+import com.epam.esm.entity.GiftCertificateTag;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Gift certificate dao
@@ -10,12 +12,13 @@ import java.util.List;
 public abstract class GiftCertificateDao extends AbstractDao<GiftCertificate> {
 
     /**
-     * Find certificates by tag id
+     * Find Certificates containing current tags
      *
-     * @param tagId tag id
-     * @return certificates
+     * @param page Page number in URL
+     * @param tags current tags
+     * @return Certificates
      */
-    public abstract List<GiftCertificate> findByTagId(long tagId);
+    public abstract List<GiftCertificate> findByTags(int page, Set<GiftCertificateTag> tags);
 
     /**
      * Find certificates by tag id keyword
@@ -23,29 +26,14 @@ public abstract class GiftCertificateDao extends AbstractDao<GiftCertificate> {
      * @param keyWord cert name or description
      * @return certificates
      */
-    public abstract List<GiftCertificate> findByKeyword(String keyWord);
+    public abstract List<GiftCertificate> findByKeyword(int page, String keyWord);
 
     /**
-     * Update certificate
      *
-     * @param certificate certificate
-     */
-    public abstract void update(GiftCertificate certificate);
-
-    /**
-     * Add certificate-tag relation
      *
-     * @param certificateId certificate id
-     * @param tagId         tag id
+     * @param page Page number in URL
+     * @param sort Sort type by name/description asc/desc
+     * @return Certificates list
      */
-    public abstract void addRelation(long certificateId, long tagId);
-
-    /**
-     * Find certificate-tag relation
-     *
-     * @param certificateId certificate id
-     * @param tagId         tag id
-     * @return result
-     */
-    public abstract boolean findRelation(long certificateId, long tagId);
+    public abstract List<GiftCertificate> findAllAndSort(int page, String sort);
 }

@@ -2,24 +2,27 @@ package com.epam.esm.dao;
 
 import com.epam.esm.config.JUnitConfig;
 import com.epam.esm.entity.GiftCertificateTag;
+import com.epam.esm.exception.ResourceNotFoundException;
 import org.flywaydb.core.Flyway;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Optional;
 
-@ActiveProfiles(profiles = "qa")
-@SpringJUnitConfig
 @Transactional
-@ContextConfiguration(classes = JUnitConfig.class)
+@ActiveProfiles(profiles = "qa")
+@SpringJUnitConfig(JUnitConfig.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class GiftCertificateTagDaoTest {
-    private GiftCertificateTag tag;
+    private GiftCertificateTag testTag;
 
     @Autowired
     private GiftCertificateTagDao dao;
@@ -28,45 +31,42 @@ class GiftCertificateTagDaoTest {
     private Flyway flyway;
 
     @BeforeAll
-    void beforeAll() {
+    void migrateFlyway() {
         flyway.migrate();
-        tag = new GiftCertificateTag("testTag");
     }
 
-    @AfterAll
-    void afterAll() {
-        tag = null;
+    @BeforeEach
+    void setUpTag() {
+        testTag = new GiftCertificateTag("test");
     }
 
     @Test
     void addTest() {
-        GiftCertificateTag expected = dao.add(tag);
-        Assertions.assertNotNull(expected);
+        GiftCertificateTag tag = dao.add(testTag);
+        Assertions.assertEquals(testTag.getName(), tag.getName());
     }
 
-    @Test
-    void findAllTest() {
-        List<GiftCertificateTag> tags = dao.findAll();
-        Assertions.assertFalse(tags.isEmpty());
+    @AfterEach
+    void tearDown() {
+        testTag = null;
     }
 
     @Test
     void findByIdTest() {
-        Optional<GiftCertificateTag> optionalTag = dao.findById(100);
-        Assertions.assertTrue(optionalTag.isPresent()
-                && optionalTag.get().getName().equals("sport"));
+        Optional<GiftCertificateTag> optional = dao.findById(100);
+        Assertions.assertEquals("sport",
+                optional.orElseThrow(ResourceNotFoundException::new).getName());
     }
 
     @Test
     void findByNameTest() {
-        Optional<GiftCertificateTag> optionalTag = dao.findByName("hobby");
-        Assertions.assertTrue(optionalTag.isPresent()
-                && optionalTag.get().getName().equals("hobby"));
+        Optional<GiftCertificateTag> optional = dao.findByName("sport");
+        Assertions.assertEquals("sport",
+                optional.orElseThrow(ResourceNotFoundException::new).getName());
     }
 
     @Test
-    void findByCertificateIdTest() {
-        List<GiftCertificateTag> tags = dao.findByCertificateId(101);
-        Assertions.assertFalse(tags.isEmpty());
+    void deleteTest() {
+        Assertions.assertTrue(dao.delete(100));
     }
 }

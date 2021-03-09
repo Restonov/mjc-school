@@ -2,7 +2,6 @@ package com.epam.esm.dao;
 
 import com.epam.esm.entity.GiftCertificateTag;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -17,13 +16,4 @@ public abstract class GiftCertificateTagDao extends AbstractDao<GiftCertificateT
      * @return optional Tag
      */
     public abstract Optional<GiftCertificateTag> findByName(String tagName);
-
-    /**
-     * Find Tags by Certificate id
-     *
-     * @param certificateId Certificate id
-     * @return tags
-     */
-    public abstract List<GiftCertificateTag> findByCertificateId(long certificateId);
-
 }

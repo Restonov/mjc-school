@@ -1,26 +1,25 @@
 package com.epam.esm.service.impl;
 
-import com.epam.esm.comparator.GiftCertificateComparator;
 import com.epam.esm.dao.GiftCertificateDao;
 import com.epam.esm.dao.GiftCertificateTagDao;
-import com.epam.esm.exception.ResourceNotFoundException;
-import com.epam.esm.entity.ParameterName;
 import com.epam.esm.entity.GiftCertificate;
 import com.epam.esm.entity.GiftCertificateTag;
+import com.epam.esm.exception.ResourceNotFoundException;
 import com.epam.esm.service.GiftCertificateService;
-import com.epam.esm.service.GiftCertificateMatcher;
+import com.epam.esm.util.GiftCertificateUtils;
 import com.epam.esm.util.QueryGenerator;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.github.fge.jsonpatch.JsonPatch;
 import lombok.NoArgsConstructor;
-import org.jetbrains.annotations.NotNull;
-import org.springframework.dao.DataAccessException;
+import lombok.SneakyThrows;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
+import javax.validation.constraints.NotNull;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * Gift certificate service implementation
@@ -28,132 +27,136 @@ import java.util.stream.Stream;
 @NoArgsConstructor
 @Transactional
 @Service("giftCertificateService")
-public class GiftCertificateServiceImpl extends GiftCertificateService{
+public class GiftCertificateServiceImpl extends GiftCertificateService {
 
     /**
-     * Instantiates a new Gift certificate service
+     * Constructor for Test purposes
      *
-     * @param certDao cert dao
-     * @param tagDao  tag dao
+     * @param certDao Certificate DAO
+     * @param tagDao  Tag DAO
      */
     public GiftCertificateServiceImpl(GiftCertificateDao certDao, GiftCertificateTagDao tagDao) {
-        super(certDao, tagDao);
+        this.certificateDao = certDao;
+        this.tagDao = tagDao;
+    }
+
+    /**
+     * We get Certificate dto without ID and any dates
+     * but We get Tag collection and so
+     * here implemented check:
+     * if DB already contains Tag, we get it from DB (with exists ID)
+     * and add it to our Certificate manually
+     * else We just create new Tag and add it to Certificate
+     * <p>
+     * Unfortunately I can't find something that helps me with
+     * automation this process by, for example, *Cascade* annotation param
+     *
+     * @param certificate Dto certificate
+     * @return entity Certificate with ID & create / update Date
+     */
+    @Override
+    public GiftCertificate create(@NotNull GiftCertificate certificate) {
+        Set<GiftCertificateTag> tags = createCertificateTagRelation(certificate);
+        certificate.setTags(tags);
+        return certificateDao.add(certificate);
     }
 
     @Override
-    public GiftCertificate create(@NotNull GiftCertificate certificate){
-            LocalDateTime currentTime = LocalDateTime.now();
-            certificate.setCreateDate(currentTime);
-            certificate.setLastUpdateDate(currentTime);
-            GiftCertificate createdCertificate = certDao.add(certificate);
-            createCertificateTagRelation(createdCertificate);
-        return createdCertificate;
+    public List<GiftCertificate> findAll(int currentPage) {
+        return certificateDao.findAll(currentPage, GiftCertificate.class);
     }
 
     @Override
-    public List<GiftCertificate> findAll(){
-        List<GiftCertificate> certificates = certDao.findAll();
-            for (GiftCertificate certificate : certificates) {
-                List<GiftCertificateTag> tags = tagDao.findByCertificateId(certificate.getCertificateId());
-                List<String> tagNames = tags.stream().map(GiftCertificateTag::getName).collect(Collectors.toList());
-                certificate.setTags(tagNames);
-            }
+    public List<GiftCertificate> findAllAndSort(int page, String sort) {
+        List<GiftCertificate> certificates;
+        if (sort != null) {
+            certificates = certificateDao.findAllAndSort(page, sort);
+        } else {
+            certificates = findAll(page);
+        }
         return certificates;
     }
 
-    public List<GiftCertificate> findAllAndSort(String sortBy, String orderType){
-        List<GiftCertificate> certificates = findAll();
-        boolean comparatorExists = Arrays.stream(GiftCertificateComparator.values())
-                    .anyMatch(c -> c.name().equalsIgnoreCase(sortBy));
-        Comparator<GiftCertificate> comparator = comparatorExists
-                ? GiftCertificateComparator.valueOf(sortBy.toUpperCase())
-                : GiftCertificateComparator.NAME;
-            if (orderType.equalsIgnoreCase(ParameterName.DESCENDING)) {
-                certificates.sort(comparator.reversed());
-            } else {
-                certificates.sort(comparator);
-            }
-        return certificates;
-    }
-
     @Override
-    public Optional<GiftCertificate> findById(long id) {
-        Optional<GiftCertificate> certificate;
-        try {
-            certificate = certDao.findById(id);
-            if (certificate.isPresent()) {
-                GiftCertificate certificateWithTags = certificate.get();
-                List<GiftCertificateTag> tags = tagDao.findByCertificateId(id);
-                List<String> tagNames = tags.stream().map(GiftCertificateTag::getName).collect(Collectors.toList());
-                certificateWithTags.setTags(tagNames);
-            }
-        } catch (DataAccessException e) {
-            throw new ResourceNotFoundException("Requested resource not found (id = " + id + ")", e);
+    public GiftCertificate findById(long id) {
+        GiftCertificate certificate;
+        Optional<GiftCertificate> optionalCert = certificateDao.findById(id);
+        if (optionalCert.isPresent()) {
+            certificate = optionalCert.get();
+        } else {
+            throw new ResourceNotFoundException("certificate.not.found");
         }
         return certificate;
     }
 
     @Override
-    public List<GiftCertificate> findByTagName(String tagName) {
-        List<GiftCertificate> certificates = new ArrayList<>();
+    public List<GiftCertificate> findByTagNames(int page, String... tagNames) {
+        Set<GiftCertificateTag> tags = new HashSet<>();
+        for (String tagName : tagNames) {
             Optional<GiftCertificateTag> optionalTag = tagDao.findByName(tagName);
             if (optionalTag.isPresent()) {
                 GiftCertificateTag tag = optionalTag.get();
-                certificates = certDao.findByTagId(tag.getTagId());
-                List<String> tagNames = Stream.of(tagName).collect(Collectors.toList());
-                certificates.forEach(c -> c.setTags(tagNames));
-            }
-        return certificates;
-    }
-
-    @Override
-    public List<GiftCertificate> findByKeyWord(String keyWord) {
-        List<GiftCertificate> certificates;
-            certificates = certDao.findByKeyword(QueryGenerator.generateKeyWord(keyWord));
-            if (certificates != null) {
-                for (GiftCertificate certificate : certificates) {
-                    List<GiftCertificateTag> tags = tagDao.findByCertificateId(certificate.getCertificateId());
-                    List<String> tagNames = tags.stream().map(GiftCertificateTag::getName).collect(Collectors.toList());
-                    certificate.setTags(tagNames);
-                }
-            }
-        return certificates;
-    }
-
-    @Override
-    public void update(GiftCertificate newCert, long id) {
-        try {
-            Optional<GiftCertificate> optionalCertificate = certDao.findById(id);
-            if (optionalCertificate.isPresent()) {
-                GiftCertificate oldCert = optionalCertificate.get();
-                GiftCertificate certificate = GiftCertificateMatcher.match(oldCert, newCert);
-                certDao.update(certificate);
-                createCertificateTagRelation(certificate);
-            }
-        } catch (DataAccessException ignored) { }
-    }
-
-    @Override
-    public void delete(long id){
-        certDao.delete(id);
-    }
-
-    private void createCertificateTagRelation(GiftCertificate certificate) {
-        List<String> tagNames = certificate.getTags();
-        if (tagNames != null) {
-            long certId = certificate.getCertificateId();
-            for (String tagName : tagNames) {
-                Optional<GiftCertificateTag> optionalTag = tagDao.findByName(tagName);
-                if (optionalTag.isPresent()) {
-                    if (!certDao.findRelation(certId, optionalTag.get().getTagId())){
-                        certDao.addRelation(certId, optionalTag.get().getTagId());
-                    }
-                } else {
-                    GiftCertificateTag tag = new GiftCertificateTag(tagName);
-                    GiftCertificateTag newTagWithId = tagDao.add(tag);
-                    certDao.addRelation(certId, newTagWithId.getTagId());
-                }
+                tags.add(tag);
             }
         }
+        return certificateDao.findByTags(page, tags);
+    }
+
+    @Override
+    public List<GiftCertificate> findByKeyWord(int page, String keyWord) {
+        return certificateDao.findByKeyword(page, QueryGenerator.generateKeyWord(keyWord));
+    }
+
+    @Override
+    @SneakyThrows
+    public GiftCertificate update(long id, JsonPatch patch) {
+        GiftCertificate currentCertificate;
+        Optional<GiftCertificate> optionalCert = certificateDao.findById(id);
+        if (optionalCert.isPresent()) {
+            currentCertificate = optionalCert.get();
+            JsonNode node = patch.apply(objectMapper.convertValue(currentCertificate, JsonNode.class));
+            GiftCertificate patchedCertificate = objectMapper.treeToValue(node, GiftCertificate.class);
+            GiftCertificateUtils.merge(currentCertificate, patchedCertificate);
+            if (patchedCertificate.getTags() != null) {
+                currentCertificate.setTags(patchedCertificate.getTags());
+                currentCertificate.setTags(createCertificateTagRelation(currentCertificate));
+            }
+        } else {
+            throw new ResourceNotFoundException("certificate.not.found");
+        }
+        return currentCertificate;
+    }
+
+    @Override
+    public boolean delete(long id) {
+        return certificateDao.delete(id);
+    }
+
+    /**
+     * Manually create Certificate ~ Tag relation
+     * for gift_certificate_tag table
+     *
+     * @param certificate Certificate
+     * @return Tags set
+     */
+    private Set<GiftCertificateTag> createCertificateTagRelation(GiftCertificate certificate) {
+        Set<GiftCertificateTag> currentDtoTags = certificate.getTags();
+        Set<GiftCertificateTag> entityTags = new HashSet<>();
+        for (GiftCertificateTag tag : currentDtoTags) {
+            Optional<GiftCertificateTag> optionalTag = tagDao.findByName(tag.getName());
+            if (optionalTag.isPresent()) {
+                GiftCertificateTag existingTag = optionalTag.get();
+                existingTag.getCertificates().add(certificate);
+                entityTags.add(existingTag);
+            } else {
+                GiftCertificateTag tagWithoutId = new GiftCertificateTag(tag.getName());
+                Set<GiftCertificate> tagCertificates = new HashSet<>();
+                tagCertificates.add(certificate);
+                tagWithoutId.setCertificates(tagCertificates);
+                GiftCertificateTag tagWithId = tagDao.add(tagWithoutId);
+                entityTags.add(tagWithId);
+            }
+        }
+        return entityTags;
     }
 }
