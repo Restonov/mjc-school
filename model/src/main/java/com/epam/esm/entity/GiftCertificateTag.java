@@ -27,7 +27,6 @@ import java.util.Set;
 public class GiftCertificateTag {
 
     @Id
-//    @JsonIgnore
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 

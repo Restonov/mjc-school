@@ -12,12 +12,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -30,6 +33,7 @@ import java.util.Set;
 class GiftCertificateDaoTest {
     private GiftCertificate certificate;
     private Set<GiftCertificateTag> tags;
+    private Pageable pageWithResult;
 
     @Autowired
     private GiftCertificateDao certificateDao;
@@ -43,34 +47,38 @@ class GiftCertificateDaoTest {
     @BeforeAll
     void setUp() {
         flyway.migrate();
-        Set<GiftCertificateTag> tags = new HashSet<>();
-        tags.add(new GiftCertificateTag("testTag"));
-        certificate = new GiftCertificate("cer1",
-                "Test cert", BigDecimal.valueOf(150),
-                30, LocalDateTime.now(), LocalDateTime.now(), tags);
     }
 
     @AfterAll
     void tierDown() {
         certificate = null;
         tags = null;
+        pageWithResult = null;
+    }
+
+    @BeforeEach
+    void setUpAddCert() {
+        tags = new HashSet<>();
+        tags.add(new GiftCertificateTag("testTag"));
+        certificate = new GiftCertificate(
+                "Cert1", "Test cert", BigDecimal.valueOf(100), 10, tags);
     }
 
     @Test
     void addCertificateTest() {
-        GiftCertificate expected = certificateDao.add(certificate);
-        Assertions.assertEquals(certificate.getName(), expected.getName());
+        GiftCertificate cert = certificateDao.save(certificate);
+        Assertions.assertEquals("Cert1", cert.getName());
     }
 
     @Test
     void findAllTest() {
-        List<GiftCertificate> certificates = certificateDao.findAll(1, GiftCertificate.class);
+        List<GiftCertificate> certificates = certificateDao.findAll();
         Assertions.assertFalse(certificates.isEmpty());
     }
 
     @Test
     void findByIdTest() {
-        Optional<GiftCertificate> optional = certificateDao.findById(10);
+        Optional<GiftCertificate> optional = certificateDao.findById(10L);
         Assertions.assertEquals("TyRent",
                 optional.orElseThrow(ResourceNotFoundException::new).getName());
     }
@@ -82,22 +90,28 @@ class GiftCertificateDaoTest {
         optionalTravelTag.ifPresent(giftCertificateTag -> tags.add(giftCertificateTag));
         Optional<GiftCertificateTag> optionalHobbyTag = tagDao.findByName("hobby");
         optionalHobbyTag.ifPresent(giftCertificateTag -> tags.add(giftCertificateTag));
+        pageWithResult = PageRequest.of(0, 5);
     }
 
     @Test
     void findByTagNameTest() {
-        List<GiftCertificate> certificates = certificateDao.findByTags(1, tags);
-        Assertions.assertEquals("TyRent", certificates.get(0).getName());
+        Page<GiftCertificate> certificates = certificateDao.findByTagsIn(tags, pageWithResult);
+        Assertions.assertEquals("V-Kart", certificates.getContent().get(0).getName());
     }
 
     @Test
     void findByKeywordTest() {
-        List<GiftCertificate> certificates = certificateDao.findByKeyword(1,"%rent%");
-        Assertions.assertEquals("TyRent", certificates.get(0).getName());
+        Page<GiftCertificate> certificates = certificateDao
+                .findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase("ent", "ent", pageWithResult);
+        Assertions.assertEquals("TyRent", certificates.getContent().get(0).getName());
     }
 
     @Test
     void deleteTest() {
-        Assertions.assertTrue(certificateDao.delete(2));
+        final Optional<GiftCertificate> optional = certificateDao.findById(2L);
+        optional.ifPresent(c -> certificateDao.delete(c));
+
+        final Optional<GiftCertificate> secondCheck = certificateDao.findById(2L);
+        Assertions.assertFalse(secondCheck.isPresent());
     }
 }

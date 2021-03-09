@@ -1,19 +1,20 @@
 package com.epam.esm.dao;
 
 import com.epam.esm.entity.GiftCertificateTag;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
 /**
- * Gift certificate tag dao
+ * Gift certificate dao
  */
-public abstract class GiftCertificateTagDao extends AbstractDao<GiftCertificateTag> {
+public interface GiftCertificateTagDao extends JpaRepository<GiftCertificateTag, Long> {
 
     /**
-     * Find Tag by name
+     * Find Tag by Name
      *
      * @param tagName Tag name
-     * @return optional Tag
+     * @return Optional of Tag
      */
-    public abstract Optional<GiftCertificateTag> findByName(String tagName);
+    Optional<GiftCertificateTag> findByName(String tagName);
 }

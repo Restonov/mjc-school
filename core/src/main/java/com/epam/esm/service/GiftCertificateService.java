@@ -1,14 +1,18 @@
 package com.epam.esm.service;
 
 import com.epam.esm.entity.GiftCertificate;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.fge.jsonpatch.JsonPatch;
-
-import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 
 /**
  * Gift certificate service.
  */
 public abstract class GiftCertificateService extends AbstractService<GiftCertificate> {
+
+    @Autowired
+    protected ObjectMapper objectMapper;
 
     /**
      * Find certificates by keyWord
@@ -16,7 +20,7 @@ public abstract class GiftCertificateService extends AbstractService<GiftCertifi
      * @param keyWord certificate name or description
      * @return certificates, containing keyword
      */
-    public abstract List<GiftCertificate> findByKeyWord(int page, String keyWord);
+    public abstract Page<GiftCertificate> findByKeyWord(int page, int pageSize, String keyWord);
 
     /**
      * Find all certificates with received Tag
@@ -24,16 +28,17 @@ public abstract class GiftCertificateService extends AbstractService<GiftCertifi
      * @param tagNames name of the Tags
      * @return certificates
      */
-    public abstract List<GiftCertificate> findByTagNames(int page, String... tagNames);
+    public abstract Page<GiftCertificate> findByTagNames(int page, int pageSize, String... tagNames);
 
     /**
      * Find all Certificates in sorted order
      *
-     * @param page page in URL
-     * @param sort name/description asc/desc
+     * @param pageNum page in URL
+     * @param pageSize page size
+     * @param sortType name/description asc/desc
      * @return Certificates
      */
-    public abstract List<GiftCertificate> findAllAndSort(int page, String sort);
+    public abstract Page<GiftCertificate> findAllAndSort(int pageNum, int pageSize, String sortType);
 
     /**
      * Update certificate

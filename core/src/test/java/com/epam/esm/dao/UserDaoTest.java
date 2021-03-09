@@ -2,7 +2,6 @@ package com.epam.esm.dao;
 
 import com.epam.esm.config.JUnitConfig;
 import com.epam.esm.entity.User;
-import com.epam.esm.entity.UserOrder;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -12,9 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.Optional;
 
 @Transactional
 @ActiveProfiles(profiles = "qa")
@@ -35,37 +31,20 @@ class UserDaoTest {
 
     @Test
     void findByIdTest() {
-        Assertions.assertTrue(dao.findById(15).isPresent());
+        Assertions.assertTrue(dao.findById(15L).isPresent());
     }
 
     @Test
     void findMostProfitableUserTest() {
-        User user = dao.findMostProfitableUser();
+        User user = dao.findUsersBySumOfOrdersDesc().get(0);
         Assertions.assertEquals(15, user.getId());
     }
 
     @Test
-    void findAllOrdersTest() {
-        List<UserOrder> allOrders = dao.findAllOrders(1, 10);
-        Assertions.assertFalse(allOrders.isEmpty());
-    }
-
-    @Test
-    void findOrderTest() {
-        Optional<UserOrder> order = dao.findOrder(20, 156);
-        Assertions.assertTrue(order.isPresent());
-    }
-
-    @Test
-    void addUnsupportedTest() {
-        User user = new User();
-        Assertions.assertThrows(UnsupportedOperationException.class,
-                    () -> dao.add(user));
-    }
-
-    @Test
-    void deleteUnsupportedTest() {
-        Assertions.assertThrows(UnsupportedOperationException.class,
-                () -> dao.delete(0));
+    void saveUserTest() {
+        User user = new User("Gleb");
+        user.setPassword("123456");
+        final User savedUser = dao.save(user);
+        Assertions.assertEquals("Gleb", savedUser.getName());
     }
 }

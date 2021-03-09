@@ -2,38 +2,35 @@ package com.epam.esm.dao;
 
 import com.epam.esm.entity.GiftCertificate;
 import com.epam.esm.entity.GiftCertificateTag;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.List;
 import java.util.Set;
 
 /**
  * Gift certificate dao
  */
-public abstract class GiftCertificateDao extends AbstractDao<GiftCertificate> {
+public interface GiftCertificateDao extends JpaRepository<GiftCertificate, Long> {
 
     /**
-     * Find Certificates containing current tags
+     * Find Certificates that contains provided Set of Tags
      *
-     * @param page Page number in URL
-     * @param tags current tags
-     * @return Certificates
+     * @param tags     Tags
+     * @param pageable Num and size of results
+     * @return Page of Certificates
      */
-    public abstract List<GiftCertificate> findByTags(int page, Set<GiftCertificateTag> tags);
+    Page<GiftCertificate> findByTagsIn(Set<GiftCertificateTag> tags, Pageable pageable);
 
     /**
-     * Find certificates by tag id keyword
+     * Find Certificates that contains provided name or description
      *
-     * @param keyWord cert name or description
-     * @return certificates
+     * @param name        Certificate name
+     * @param description Certificate description
+     * @param pageable    Num and size of results
+     * @return Page of Certificates
      */
-    public abstract List<GiftCertificate> findByKeyword(int page, String keyWord);
-
-    /**
-     *
-     *
-     * @param page Page number in URL
-     * @param sort Sort type by name/description asc/desc
-     * @return Certificates list
-     */
-    public abstract List<GiftCertificate> findAllAndSort(int page, String sort);
+    Page<GiftCertificate> findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(String name,
+                                                                                          String description,
+                                                                                          Pageable pageable);
 }

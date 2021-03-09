@@ -42,8 +42,8 @@ class GiftCertificateTagDaoTest {
 
     @Test
     void addTest() {
-        GiftCertificateTag tag = dao.add(testTag);
-        Assertions.assertEquals(testTag.getName(), tag.getName());
+        GiftCertificateTag tag = dao.save(testTag);
+        Assertions.assertEquals("test", tag.getName());
     }
 
     @AfterEach
@@ -53,7 +53,7 @@ class GiftCertificateTagDaoTest {
 
     @Test
     void findByIdTest() {
-        Optional<GiftCertificateTag> optional = dao.findById(100);
+        Optional<GiftCertificateTag> optional = dao.findById(100L);
         Assertions.assertEquals("sport",
                 optional.orElseThrow(ResourceNotFoundException::new).getName());
     }
@@ -67,6 +67,8 @@ class GiftCertificateTagDaoTest {
 
     @Test
     void deleteTest() {
-        Assertions.assertTrue(dao.delete(100));
+        dao.deleteById(100L);
+        final Optional<GiftCertificateTag> optionalTag = dao.findById(100L);
+        Assertions.assertFalse(optionalTag.isPresent());
     }
 }

@@ -6,34 +6,36 @@ import com.epam.esm.entity.GiftCertificate;
 import com.epam.esm.entity.GiftCertificateTag;
 import com.epam.esm.exception.ResourceNotFoundException;
 import com.epam.esm.service.GiftCertificateService;
+import com.epam.esm.util.EntitySorter;
 import com.epam.esm.util.GiftCertificateUtils;
-import com.epam.esm.util.QueryGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.github.fge.jsonpatch.JsonPatch;
-import lombok.NoArgsConstructor;
 import lombok.SneakyThrows;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.validation.constraints.NotNull;
+import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
 /**
  * Gift certificate service implementation
  */
-@NoArgsConstructor
 @Transactional
 @Service("giftCertificateService")
 public class GiftCertificateServiceImpl extends GiftCertificateService {
 
     /**
-     * Constructor for Test purposes
+     * Test constructor
      *
-     * @param certDao Certificate DAO
-     * @param tagDao  Tag DAO
+     * @param certDao Certificate dao
+     * @param tagDao  Tag dao
      */
     public GiftCertificateServiceImpl(GiftCertificateDao certDao, GiftCertificateTagDao tagDao) {
         this.certificateDao = certDao;
@@ -58,26 +60,31 @@ public class GiftCertificateServiceImpl extends GiftCertificateService {
     public GiftCertificate create(@NotNull GiftCertificate certificate) {
         Set<GiftCertificateTag> tags = createCertificateTagRelation(certificate);
         certificate.setTags(tags);
-        return certificateDao.add(certificate);
+        return certificateDao.save(certificate);
     }
 
     @Override
-    public List<GiftCertificate> findAll(int currentPage) {
-        return certificateDao.findAll(currentPage, GiftCertificate.class);
+    @Transactional(readOnly = true)
+    public Page<GiftCertificate> findAll(int currentPage, int pageSize) {
+        Pageable pageAndResultPerPage = PageRequest.of(currentPage, pageSize);
+        return certificateDao.findAll(pageAndResultPerPage);
     }
 
     @Override
-    public List<GiftCertificate> findAllAndSort(int page, String sort) {
-        List<GiftCertificate> certificates;
-        if (sort != null) {
-            certificates = certificateDao.findAllAndSort(page, sort);
+    @Transactional(readOnly = true)
+    public Page<GiftCertificate> findAllAndSort(int currentPage, int pageSize, String sort) {
+        Sort sortType;
+        if (Arrays.stream(EntitySorter.values()).anyMatch(s -> s.name().equalsIgnoreCase(sort))) {
+            sortType = EntitySorter.valueOf(sort.toUpperCase()).getSortType();
         } else {
-            certificates = findAll(page);
+            sortType = EntitySorter.NAME_ASC.getSortType();
         }
-        return certificates;
+        Pageable pageSortedResult = PageRequest.of(currentPage, pageSize, sortType);
+        return certificateDao.findAll(pageSortedResult);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public GiftCertificate findById(long id) {
         GiftCertificate certificate;
         Optional<GiftCertificate> optionalCert = certificateDao.findById(id);
@@ -90,7 +97,8 @@ public class GiftCertificateServiceImpl extends GiftCertificateService {
     }
 
     @Override
-    public List<GiftCertificate> findByTagNames(int page, String... tagNames) {
+    @Transactional(readOnly = true)
+    public Page<GiftCertificate> findByTagNames(int currentPage, int pageSize, String... tagNames) {
         Set<GiftCertificateTag> tags = new HashSet<>();
         for (String tagName : tagNames) {
             Optional<GiftCertificateTag> optionalTag = tagDao.findByName(tagName);
@@ -99,12 +107,16 @@ public class GiftCertificateServiceImpl extends GiftCertificateService {
                 tags.add(tag);
             }
         }
-        return certificateDao.findByTags(page, tags);
+        Pageable pageWithResult = PageRequest.of(currentPage, pageSize);
+        return certificateDao.findByTagsIn(tags, pageWithResult);
     }
 
     @Override
-    public List<GiftCertificate> findByKeyWord(int page, String keyWord) {
-        return certificateDao.findByKeyword(page, QueryGenerator.generateKeyWord(keyWord));
+    @Transactional(readOnly = true)
+    public Page<GiftCertificate> findByKeyWord(int currentPage, int pageSize, String keyWord) {
+        Pageable pageWithResult = PageRequest.of(currentPage, pageSize);
+        return certificateDao
+                .findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(keyWord, keyWord, pageWithResult);
     }
 
     @Override
@@ -128,8 +140,9 @@ public class GiftCertificateServiceImpl extends GiftCertificateService {
     }
 
     @Override
-    public boolean delete(long id) {
-        return certificateDao.delete(id);
+    public void delete(long id) {
+        Optional<GiftCertificate> optionalCertificate = certificateDao.findById(id);
+        optionalCertificate.ifPresent(c -> certificateDao.delete(c));
     }
 
     /**
@@ -139,7 +152,7 @@ public class GiftCertificateServiceImpl extends GiftCertificateService {
      * @param certificate Certificate
      * @return Tags set
      */
-    private Set<GiftCertificateTag> createCertificateTagRelation(GiftCertificate certificate) {
+    public Set<GiftCertificateTag> createCertificateTagRelation(GiftCertificate certificate) {
         Set<GiftCertificateTag> currentDtoTags = certificate.getTags();
         Set<GiftCertificateTag> entityTags = new HashSet<>();
         for (GiftCertificateTag tag : currentDtoTags) {
@@ -153,7 +166,7 @@ public class GiftCertificateServiceImpl extends GiftCertificateService {
                 Set<GiftCertificate> tagCertificates = new HashSet<>();
                 tagCertificates.add(certificate);
                 tagWithoutId.setCertificates(tagCertificates);
-                GiftCertificateTag tagWithId = tagDao.add(tagWithoutId);
+                GiftCertificateTag tagWithId = tagDao.save(tagWithoutId);
                 entityTags.add(tagWithId);
             }
         }

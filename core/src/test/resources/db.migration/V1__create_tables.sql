@@ -34,7 +34,9 @@ create table if not exists gift_certificate_tag
 create table if not exists users
 (
     id serial primary key,
-    name character varying(30) not null
+    name character varying(30) not null,
+    password character varying(30),
+    role character varying(15)
 );
 
 create table if not exists user_order

@@ -5,7 +5,6 @@ import com.epam.esm.service.GiftCertificateTagService;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
 import io.restassured.module.mockmvc.response.MockMvcResponse;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 
@@ -26,7 +26,7 @@ import static org.mockito.Mockito.when;
 @RunWith(MockitoJUnitRunner.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class GiftCertificateTagControllerTest {
-    private static final String TAGS_PATH = "/tags";
+    private static final String TAGS_PATH = "/api/tags";
     private GiftCertificateTagService service;
     private GiftCertificateTag tag;
 
@@ -44,9 +44,9 @@ class GiftCertificateTagControllerTest {
 
     @Test
     void findAllTest() {
-        when(service.findAll(1)).thenReturn(new ArrayList<>());
+        when(service.findAll(0, 10)).thenReturn(new PageImpl<>(new ArrayList<>()));
         given().when()
-                .get(TAGS_PATH + "?page=1")
+                .get(TAGS_PATH + "?page=0")
                 .then()
                 .statusCode(HttpStatus.FOUND.value());
     }
@@ -99,17 +99,15 @@ class GiftCertificateTagControllerTest {
         given()
                 .when()
                 .get(TAGS_PATH + "/" + id)
-                .then().statusCode(HttpStatus.OK.value());
+                .then().statusCode(HttpStatus.FOUND.value());
     }
 
 
     @Test
     void deleteTest() {
         long id = 5;
-        when(service.delete(id)).thenReturn(Boolean.TRUE);
-
         given().when()
                 .delete(TAGS_PATH + "/" + id)
-                .then().statusCode(HttpStatus.OK.value());
+                .then().statusCode(HttpStatus.NO_CONTENT.value());
     }
 }

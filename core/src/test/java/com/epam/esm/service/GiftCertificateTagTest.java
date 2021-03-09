@@ -14,6 +14,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -36,6 +40,8 @@ class GiftCertificateTagTest {
     private User user;
     private UserOrder order;
     private GiftCertificate certificate;
+    private Page<GiftCertificateTag> tagPage;
+    private Pageable pageAndResultPerPage;
 
     @BeforeAll
     void setUp() {
@@ -54,6 +60,8 @@ class GiftCertificateTagTest {
         user = null;
         order = null;
         certificate = null;
+        tagPage = null;
+        pageAndResultPerPage = null;
     }
 
     @BeforeEach
@@ -63,7 +71,7 @@ class GiftCertificateTagTest {
 
     @Test
     void createTest() {
-        when(tagDao.add(tag)).thenReturn(tag);
+        when(tagDao.save(tag)).thenReturn(tag);
         GiftCertificateTag actual = service.create(tag);
         Assertions.assertNotNull(actual);
     }
@@ -73,13 +81,16 @@ class GiftCertificateTagTest {
         tags = new ArrayList<>();
         tag = new GiftCertificateTag("testTag");
         tags.add(tag);
+
+        pageAndResultPerPage = PageRequest.of(0, 10);
+        tagPage = new PageImpl<>(tags, pageAndResultPerPage, 5);
     }
 
     @Test
     void findAllTest() {
-        when(tagDao.findAll(1, GiftCertificateTag.class)).thenReturn(tags);
-        List<GiftCertificateTag> allTags = service.findAll(1);
-        verify(tagDao).findAll(1, GiftCertificateTag.class);
+        when(tagDao.findAll(pageAndResultPerPage)).thenReturn(tagPage);
+        Page<GiftCertificateTag> allTags = service.findAll(0, 10);
+        verify(tagDao).findAll(pageAndResultPerPage);
         Assertions.assertFalse(allTags.isEmpty());
     }
 
@@ -90,9 +101,9 @@ class GiftCertificateTagTest {
 
     @Test
     void findById() {
-        when(tagDao.findById(101)).thenReturn(Optional.of(tag));
+        when(tagDao.findById(101L)).thenReturn(Optional.of(tag));
         GiftCertificateTag actualTag = service.findById(101);
-        verify(tagDao).findById(101);
+        verify(tagDao).findById(101L);
         Assertions.assertNotNull(actualTag);
     }
 
@@ -100,8 +111,8 @@ class GiftCertificateTagTest {
     void setUpUserWithOrders() {
         user = new User(1, "Boris");
 
-        certificate = new GiftCertificate("Test cert",
-                "Cert for test purpose", new BigDecimal(100), 30);
+        certificate = new GiftCertificate("Cert",
+                "Cert for test purpose", new BigDecimal(100), 30, new HashSet<>());
         Set<GiftCertificateTag> certificateTags = new HashSet<>();
         GiftCertificateTag certificateTag = new GiftCertificateTag(1, "tag");
         certificateTags.add(certificateTag);
@@ -115,16 +126,24 @@ class GiftCertificateTagTest {
 
     @Test
     void findMostProfitableTag() {
-        when(userDao.findMostProfitableUser()).thenReturn(user);
+        List<User> users = new ArrayList<>();
+        users.add(user);
+        when(userDao.findUsersBySumOfOrdersDesc()).thenReturn(users);
         GiftCertificateTag mostProfitableTag = service.findMostProfitableTag();
-        verify(userDao).findMostProfitableUser();
+        verify(userDao).findUsersBySumOfOrdersDesc();
         Assertions.assertEquals("tag", mostProfitableTag.getName());
     }
 
     @Test
     void deleteTest() {
-        when(tagDao.delete(1)).thenReturn(true);
-        Assertions.assertTrue(tagDao.delete(1));
+        tag = new GiftCertificateTag();
+        tag.setId(1L);
+        when(tagDao.findById(1L)).thenReturn(Optional.of(tag));
+
+        service.delete(1L);
+
+        verify(tagDao).findById(1L);
+        verify(tagDao).delete(tag);
     }
 
 

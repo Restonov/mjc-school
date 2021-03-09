@@ -4,10 +4,8 @@ import com.epam.esm.dao.GiftCertificateDao;
 import com.epam.esm.dao.GiftCertificateTagDao;
 import com.epam.esm.dao.UserDao;
 import com.epam.esm.dao.UserOrderDao;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
 
 /**
  * Abstract service
@@ -24,8 +22,6 @@ public abstract class AbstractService<T> {
     protected UserDao userDao;
     @Autowired
     protected UserOrderDao orderDao;
-    @Autowired
-    protected ObjectMapper objectMapper;
 
     /**
      * Create resource
@@ -34,13 +30,6 @@ public abstract class AbstractService<T> {
      * @return the t
      */
     public abstract T create(T resource);
-
-    /**
-     * Find all resources
-     *
-     * @return resource
-     */
-    public abstract List<T> findAll(int page);
 
     /**
      * Find resource by id
@@ -55,6 +44,13 @@ public abstract class AbstractService<T> {
      *
      * @param id resource id
      */
-    public abstract boolean delete(long id);
+    public abstract void delete(long id);
+
+    /**
+     * Find all resources
+     *
+     * @return resource
+     */
+    public abstract Page<T> findAll(int pageNum, int pageSize);
 }
 

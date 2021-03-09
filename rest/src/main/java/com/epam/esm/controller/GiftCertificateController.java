@@ -1,14 +1,17 @@
 package com.epam.esm.controller;
 
+import com.epam.esm.dto.GiftCertificateDto;
+import com.epam.esm.dto.PagedModelDto;
+import com.epam.esm.entity.Constants;
 import com.epam.esm.entity.GiftCertificate;
-import com.epam.esm.entity.ParameterName;
 import com.epam.esm.service.GiftCertificateService;
-import com.epam.esm.util.ResponseEntityWrapper;
+import com.epam.esm.util.DtoConverter;
+import com.epam.esm.util.EntityConverter;
 import com.github.fge.jsonpatch.JsonPatch;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.math.NumberUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.hateoas.EntityModel;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -22,12 +25,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import javax.validation.Valid;
 import javax.validation.constraints.Min;
-import java.net.URI;
-import java.util.List;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
@@ -38,8 +40,8 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 @Validated
 @RestController
 @RequiredArgsConstructor
-@RequestMapping(value = ParameterName.CERTIFICATES_URL, produces = MediaType.APPLICATION_JSON_VALUE)
-public class GiftCertificateController{
+@RequestMapping(value = Constants.CERTIFICATES_URL, produces = MediaType.APPLICATION_JSON_VALUE)
+public class GiftCertificateController {
 
     private final GiftCertificateService service;
 
@@ -49,25 +51,34 @@ public class GiftCertificateController{
      * @param certificateDto new Certificate
      * @return ResponseEntity<Certificate>
      */
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<GiftCertificate> create(@RequestBody GiftCertificate certificateDto) {
-        GiftCertificate certificate = service.create(certificateDto);
-        URI uri = ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path(ParameterName.CERTIFICATES_URL + "/{id}")
-                .buildAndExpand(certificateDto.getId()).toUri();
-        return ResponseEntity.created(uri).body(certificate);
+    public EntityModel<GiftCertificateDto> create(@RequestBody @Valid GiftCertificateDto certificateDto) {
+        GiftCertificate certificate = service.create(DtoConverter.convertCertificateToEntity(certificateDto));
+        return EntityModel.of(
+                EntityConverter.convertCertificateToDto(certificate),
+                linkTo(methodOn(GiftCertificateController.class)
+                        .findById(certificate.getId()))
+                        .withSelfRel()
+        );
     }
 
     /**
      * Find all Certificates
      *
      * @param page pagination page
+     * @param size results per page
      * @return List of Certificates
      */
-    @GetMapping(params = {"page"})
-    public ResponseEntity<List<GiftCertificate>> findAll( @RequestParam(defaultValue = "1") @Min(1) int page ) {
-        List<GiftCertificate> certificates = service.findAll(page);
-        return new ResponseEntity<>(certificates, new HttpHeaders(), HttpStatus.FOUND);
+    @GetMapping()
+    public PagedModelDto findAll(@RequestParam(required = false, defaultValue = "0") @Min(0) int page,
+                                 @RequestParam(required = false, defaultValue = "10") @Min(1) int size,
+                                 PagedResourcesAssembler<GiftCertificate> assembler) {
+        Page<GiftCertificate> certificates = service.findAll(page, size);
+        return new PagedModelDto(
+                assembler.toModel(certificates),
+                HttpStatus.FOUND
+        );
     }
 
     /**
@@ -78,10 +89,15 @@ public class GiftCertificateController{
      * @return List of Certificates
      */
     @GetMapping(params = {"page", "sort"})
-    public ResponseEntity<List<GiftCertificate>> findAllAndSort( @RequestParam(defaultValue = "1") @Min(1) int page,
-                                                          @RequestParam String sort) {
-        List<GiftCertificate> certificates = service.findAllAndSort(page, sort);
-        return new ResponseEntity<>(certificates, new HttpHeaders(), HttpStatus.FOUND);
+    public PagedModelDto findAllAndSort(@RequestParam @Min(0) int page,
+                                                        @RequestParam(required = false, defaultValue = "10") @Min(1) int size,
+                                                        @RequestParam String sort,
+                                                        PagedResourcesAssembler<GiftCertificate> assembler) {
+        Page<GiftCertificate> certificates = service.findAllAndSort(page, size, sort);
+        return new PagedModelDto(
+                assembler.toModel(certificates),
+                HttpStatus.FOUND
+        );
     }
 
     /**
@@ -92,72 +108,75 @@ public class GiftCertificateController{
      * @return Certificate
      */
     @GetMapping("/{id}")
-    public EntityModel<GiftCertificate> findById(@PathVariable @Min(1) long id) {
+    @ResponseStatus(HttpStatus.FOUND)
+    public EntityModel<GiftCertificateDto> findById(@PathVariable @Min(1) long id) {
         GiftCertificate certificate = service.findById(id);
-        return EntityModel.of(certificate,
+        return EntityModel.of(
+                EntityConverter.convertCertificateToDto(certificate),
                 linkTo(methodOn(GiftCertificateController.class)
-                        .findById(id))
-                        .withSelfRel(),
-                linkTo(methodOn(GiftCertificateController.class)
-                        .create(certificate))
-                        .withRel(ParameterName.CREATE_CERTIFICATE)
+                        .create(new GiftCertificateDto()))
+                        .withRel(Constants.CREATE_CERTIFICATE)
                         .withType(HttpMethod.POST.name()),
                 linkTo(methodOn(GiftCertificateController.class)
-                        .findByTagName(NumberUtils.INTEGER_ONE, new String[]{ParameterName.TAG_NAME}))
-                        .withRel(ParameterName.BY_TAG_NAME),
+                        .delete(id)).withRel(Constants.DELETE_CERTIFICATE)
+                        .withType(HttpMethod.DELETE.name()),
                 linkTo(methodOn(GiftCertificateController.class)
-                        .findByKeyWord(ParameterName.KEY_WORD, NumberUtils.INTEGER_ONE))
-                        .withRel(ParameterName.BY_KEYWORD),
-                linkTo(methodOn(GiftCertificateController.class)
-                        .findAll(NumberUtils.INTEGER_ONE))
-                        .withRel(ParameterName.ALL_CERTIFICATES),
-                linkTo(methodOn(GiftCertificateController.class)
-                        .findAllAndSort(NumberUtils.INTEGER_ONE, ParameterName.SORT_BY))
-                        .withRel(ParameterName.ALL_SORTED_CERTIFICATES),
-                linkTo(methodOn(GiftCertificateController.class)
-                        .delete(id)).withRel(ParameterName.DELETE_CERTIFICATE)
-                        .withType(HttpMethod.DELETE.name())
+                        .findAll(0, 10, new PagedResourcesAssembler<>(null, null)))
+                        .withRel(Constants.ALL_CERTIFICATES)
         );
     }
 
     /**
-     * Find Certificate by tag name
+     * Find Certificate by tag name meth
      *
      * @param tags name of the Tag
      * @return Certificates contains this Tag
      */
     @GetMapping(params = {"page", "tags"})
-    public ResponseEntity<List<GiftCertificate>> findByTagName(@RequestParam(defaultValue = "1") @Min(1) int page,
-                                                               @RequestParam String[] tags) {
-        List<GiftCertificate> certificates = service.findByTagNames(page, tags);
-        return new ResponseEntity<>(certificates, new HttpHeaders(), HttpStatus.FOUND);
+    public PagedModelDto findByTagName(@RequestParam @Min(0) int page,
+                                                       @RequestParam(required = false, defaultValue = "10") @Min(1) int size,
+                                                       @RequestParam String[] tags,
+                                                       PagedResourcesAssembler<GiftCertificate> assembler) {
+        Page<GiftCertificate> certificates = service.findByTagNames(page, size, tags);
+        return new PagedModelDto(
+                assembler.toModel(certificates),
+                HttpStatus.FOUND
+        );
     }
 
     /**
      * Find all Certificates
      *
      * @param search name/description
-     * @param page pagination page
+     * @param page   pagination page
      * @return List of Certificates
      */
     @GetMapping(params = {"search", "page"})
-    public ResponseEntity<List<GiftCertificate>> findByKeyWord(@RequestParam String search,
-                                                               @RequestParam(defaultValue = "1") @Min(1) int page) {
-        List<GiftCertificate> certificates = service.findByKeyWord(page, search);
-        return new ResponseEntity<>(certificates, new HttpHeaders(), HttpStatus.FOUND);
+    public PagedModelDto findByKeyWord(@RequestParam String search,
+                                                       @RequestParam @Min(0) int page,
+                                                       @RequestParam(required = false, defaultValue = "10") @Min(1) int size,
+                                                       PagedResourcesAssembler<GiftCertificate> assembler) {
+        Page<GiftCertificate> certificates = service.findByKeyWord(page, size, search);
+        return new PagedModelDto(
+                assembler.toModel(certificates),
+                HttpStatus.FOUND
+        );
     }
 
     /**
      * Update each field of Certificates via patch
      *
-     * @param id Certificate id
+     * @param id    Certificate id
      * @param patch Json patch
      * @return ResponseEntity<Certificate>
      */
-    @PatchMapping(path = "/{id}", consumes = ParameterName.APPLICATION_JSON_PATCH)
-    public ResponseEntity<GiftCertificate> update(@PathVariable @Min(1) long id, @RequestBody JsonPatch patch) {
+    @PatchMapping(path = "/{id}", consumes = Constants.APPLICATION_JSON_PATCH)
+    public ResponseEntity<GiftCertificateDto> update(@PathVariable @Min(1) long id, @RequestBody JsonPatch patch) {
         GiftCertificate certificate = service.update(id, patch);
-        return new ResponseEntity<>(certificate, HttpStatus.OK);
+        return new ResponseEntity<>(
+                EntityConverter.convertCertificateToDto(certificate),
+                HttpStatus.OK
+        );
     }
 
     /**
@@ -167,8 +186,10 @@ public class GiftCertificateController{
      * @return ResponseEntity
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Boolean> delete(@PathVariable @Min(1) long id) {
-        boolean operationResult = service.delete(id);
-        return ResponseEntityWrapper.wrapBoolean(operationResult);
+    public ResponseEntity<Void> delete(@PathVariable @Min(1) long id) {
+        service.delete(id);
+        return ResponseEntity
+                .status(HttpStatus.NO_CONTENT)
+                .build();
     }
 }

@@ -1,35 +1,28 @@
 package com.epam.esm.dao;
 
 import com.epam.esm.entity.User;
-import com.epam.esm.entity.UserOrder;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
 
-public abstract class UserDao extends AbstractDao<User> {
+public interface UserDao extends JpaRepository<User, Long> {
 
     /**
-     * Find all User's orders
+     * Find Users ordered by sum of Orders DESC
+     * First result will be the most profitable User
      *
-     * @param page   page no in URL
-     * @param userId User id
-     * @return all User's orders
+     * @return Users
      */
-    public abstract List<UserOrder> findAllOrders(int page, long userId);
+    @Query("SELECT u FROM UserOrder o, User u WHERE o.user = u group by u ORDER BY SUM(o.cost) DESC")
+    List<User> findUsersBySumOfOrdersDesc();
 
     /**
-     * Find User's order
+     * Find User by Name
      *
-     * @param userId  User id
-     * @param orderId Order id
-     * @return chosen Order
+     * @param username User name
+     * @return Optional of User
      */
-    public abstract Optional<UserOrder> findOrder(long userId, long orderId);
-
-    /**
-     * Find User that makes the most expensive orders
-     *
-     * @return most profitable User
-     */
-    public abstract User findMostProfitableUser();
+    Optional<User> findByName(String username);
 }

@@ -13,7 +13,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Optional;
 
 import static org.mockito.Mockito.mock;
@@ -29,6 +35,8 @@ class UserOrderServiceTest {
     private UserOrder order;
     private User user;
     private GiftCertificate certificate;
+    private Pageable pageAndResultPerPage;
+    private Page<UserOrder> orderPage;
 
     @BeforeAll
     void beforeAll() {
@@ -47,35 +55,71 @@ class UserOrderServiceTest {
         order = null;
         user = null;
         certificate = null;
+        pageAndResultPerPage = null;
+        orderPage = null;
     }
 
     @BeforeEach
     void setUpCreateTest() {
-        user = mock(User.class);
-        certificate = mock(GiftCertificate.class);
-        order = mock(UserOrder.class);
+        user = new User(1);
+        certificate = new GiftCertificate();
+        certificate.setId(1);
+        certificate.setPrice(BigDecimal.valueOf(100));
+        order = new UserOrder();
+        order.setUser(user);
+        order.setCertificate(certificate);
     }
 
     @Test
     void createTest() {
-        when(order.getUser()).thenReturn(user);
-        when(order.getCertificate()).thenReturn(certificate);
-        when(user.getId()).thenReturn(1L);
-        when(certificate.getId()).thenReturn(1L);
-        when(userDao.findById(1)).thenReturn(Optional.of(user));
-        when(certificateDao.findById(1)).thenReturn(Optional.of(certificate));
-        when(orderDao.add(order)).thenReturn(order);
+        when(userDao.findById(1L)).thenReturn(Optional.of(user));
+        when(certificateDao.findById(1L)).thenReturn(Optional.of(certificate));
+        when(orderDao.save(order)).thenReturn(order);
 
-        service.create(order);
-        verify(userDao).findById(1);
-        verify(certificateDao).findById(1);
-        verify(orderDao).add(order);
+        final UserOrder userOrder = service.create(order);
+        verify(userDao).findById(1L);
+        verify(certificateDao).findById(1L);
+        verify(orderDao).save(order);
+        Assertions.assertNotNull(userOrder);
+    }
+
+    @BeforeEach
+    void setUpFindUserOrdersTest() {
+        user = new User(2);
+        pageAndResultPerPage = PageRequest.of(0, 10);
+        orderPage = new PageImpl<>(new ArrayList<>());
+    }
+
+    @Test
+    void findUserOrdersTest() {
+        when(userDao.findById(2L)).thenReturn(Optional.of(user));
+        when(orderDao.findAllByUser(user, pageAndResultPerPage)).thenReturn(orderPage);
+
+        final Page<UserOrder> userOrders = service.findUserOrders(0, 10, 2);
+        Assertions.assertNotNull(userOrders);
+    }
+
+    @BeforeEach
+    void setUpFindUserOrderTest() {
+        user = new User(3);
+        order = new UserOrder();
+    }
+
+    @Test
+    void findUserOrderTest() {
+        when(userDao.findById(3L)).thenReturn(Optional.of(user));
+        when(orderDao.findByIdAndUser(100, user)).thenReturn(Optional.of(order));
+
+        final UserOrder userOrder = service.findUserOrder(3, 100);
+        verify(userDao).findById(3L);
+        verify(orderDao).findByIdAndUser(100, user);
+        Assertions.assertNotNull(userOrder);
     }
 
     @Test
     void findAllUnsupportedTest() {
         Assertions.assertThrows(UnsupportedOperationException.class,
-                () -> service.findAll(1));
+                () -> service.findAll(0, 0));
     }
 
     @Test

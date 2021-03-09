@@ -1,18 +1,22 @@
 package com.epam.esm.controller;
 
-import com.epam.esm.entity.ParameterName;
+import com.epam.esm.dto.PagedModelDto;
+import com.epam.esm.dto.UserDto;
+import com.epam.esm.dto.UserOrderDto;
 import com.epam.esm.entity.User;
 import com.epam.esm.entity.UserOrder;
 import com.epam.esm.service.UserOrderService;
 import com.epam.esm.service.UserService;
+import com.epam.esm.util.DtoConverter;
+import com.epam.esm.util.EntityConverter;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.hateoas.EntityModel;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,13 +24,16 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import javax.validation.Valid;
 import javax.validation.constraints.Min;
-import java.net.URI;
-import java.util.List;
 
+import static com.epam.esm.entity.Constants.ALL_USERS;
+import static com.epam.esm.entity.Constants.USERS_URL;
+import static com.epam.esm.entity.Constants.USER_ORDER;
+import static com.epam.esm.entity.Constants.USER_ORDERS;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
@@ -36,7 +43,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 @Validated
 @RestController
 @RequiredArgsConstructor
-@RequestMapping(value = ParameterName.USERS_URL, produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping(value = USERS_URL, produces = MediaType.APPLICATION_JSON_VALUE)
 public class UserController {
 
     private final UserService userService;
@@ -49,15 +56,23 @@ public class UserController {
      * @param orderDto User order
      * @return ResponseEntity<UserOrder>
      */
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping(value = "{userId}/orders", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<UserOrder> createOrder(@PathVariable @Min(1) long userId,
-                                                 @RequestBody UserOrder orderDto) {
-        orderDto.setUser(new User(userId));
-        UserOrder order = orderService.create(orderDto);
-        URI uri = ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path(ParameterName.USERS_URL + "/{id}")
-                .buildAndExpand(order.getId()).toUri();
-        return ResponseEntity.created(uri).body(order);
+    @PreAuthorize("@userAccessVerification.verifyLoggedUser(@userServiceImpl.findById(#userId))")
+    public EntityModel<UserOrderDto> createOrder(@PathVariable long userId,
+                                                 @RequestBody @Valid UserOrderDto orderDto) {
+        final UserOrder order = DtoConverter.convertOrderToEntity(orderDto);
+        order.setUser(new User(userId));
+        final UserOrder createdOrder = orderService.create(order);
+        return EntityModel.of(
+                EntityConverter.convertOrderToDto(createdOrder),
+                linkTo(methodOn(UserController.class)
+                        .findOrder(userId, order.getId()))
+                        .withSelfRel(),
+                linkTo(methodOn(UserController.class)
+                        .findAllOrders(userId, 0, 10, new PagedResourcesAssembler<>(null, null)))
+                        .withRel(USER_ORDERS)
+        );
     }
 
     /**
@@ -66,10 +81,15 @@ public class UserController {
      * @param page pagination page
      * @return List of Users
      */
-    @GetMapping()
-    public ResponseEntity<List<User>> findAll(@RequestParam(defaultValue = "1") @Min(1) int page) {
-        List<User> users = userService.findAll(page);
-        return new ResponseEntity<>(users, HttpStatus.FOUND);
+    @GetMapping(params = {"page"})
+    public PagedModelDto findAllUsers(@RequestParam @Min(0) int page,
+                                      @RequestParam(required = false, defaultValue = "10") @Min(1) int size,
+                                      PagedResourcesAssembler<User> assembler) {
+        Page<User> users = userService.findAll(page, size);
+        return new PagedModelDto(
+                assembler.toModel(users),
+                HttpStatus.FOUND
+        );
     }
 
     /**
@@ -80,36 +100,39 @@ public class UserController {
      * @return User
      */
     @GetMapping(value = "/{userId}")
-    public EntityModel<User> findById(@PathVariable @Min(1) long userId) {
+    public EntityModel<UserDto> findUserById(@PathVariable @Min(1) long userId) {
         User user = userService.findById(userId);
-        return EntityModel.of(user,
+        return EntityModel.of(
+                EntityConverter.convertUserToDto(user),
                 linkTo(methodOn(UserController.class)
-                        .findById(userId)).withSelfRel(),
+                        .findOrder(userId, NumberUtils.INTEGER_ONE)).withRel(USER_ORDER),
                 linkTo(methodOn(UserController.class)
-                        .createOrder(userId, new UserOrder()))
-                        .withRel(ParameterName.CREATE_ORDER)
-                        .withType(HttpMethod.POST.name()),
+                        .findAllOrders(userId, NumberUtils.INTEGER_ZERO, 10, new PagedResourcesAssembler<>(null, null)))
+                        .withRel(USER_ORDERS),
                 linkTo(methodOn(UserController.class)
-                        .findOrder(userId, NumberUtils.INTEGER_ONE)).withRel(ParameterName.USER_ORDER),
-                linkTo(methodOn(UserController.class)
-                        .findAllOrders(userId, NumberUtils.INTEGER_ONE)).withRel(ParameterName.USER_ORDERS),
-                linkTo(methodOn(UserController.class)
-                        .findAll(NumberUtils.INTEGER_ONE)).withRel(ParameterName.ALL_USERS)
+                        .findAllUsers(NumberUtils.INTEGER_ONE, 10, new PagedResourcesAssembler<>(null, null)))
+                        .withRel(ALL_USERS)
         );
     }
 
     /**
      * Find all User orders
      *
-     * @param id User id
+     * @param userId User id
      * @param page pagination page
      * @return List of User orders
      */
-    @GetMapping("/{id}/orders")
-    public ResponseEntity<List<UserOrder>> findAllOrders(@PathVariable @Min(1) long id,
-                                                         @RequestParam @Min(1) int page) {
-        List<UserOrder> orders = userService.findAllOrders(page, id);
-        return new ResponseEntity<>(orders, new HttpHeaders(), HttpStatus.FOUND);
+    @GetMapping("/{userId}/orders")
+    @PreAuthorize("@userAccessVerification.verifyLoggedUser(@userServiceImpl.findById(#userId))")
+    public PagedModelDto findAllOrders(@PathVariable @Min(1) long userId,
+                                                       @RequestParam @Min(0) int page,
+                                                       @RequestParam(required = false, defaultValue = "10") @Min(1) int size,
+                                                       PagedResourcesAssembler<UserOrder> assembler) {
+        Page<UserOrder> orders = orderService.findUserOrders(page,size, userId);
+        return new PagedModelDto(
+                assembler.toModel(orders),
+                HttpStatus.FOUND
+        );
     }
 
     /**
@@ -119,10 +142,18 @@ public class UserController {
      * @param orderId Order id
      * @return User order
      */
+    @ResponseStatus(HttpStatus.FOUND)
     @GetMapping("/{userId}/orders/{orderId}")
-    public ResponseEntity<UserOrder> findOrder(@PathVariable @Min(1) long userId,
+    @PreAuthorize("@userAccessVerification.verifyLoggedUser(@userServiceImpl.findById(#userId))")
+    public EntityModel<UserOrderDto> findOrder(@PathVariable @Min(1) long userId,
                                                @PathVariable @Min(1) long orderId) {
-        UserOrder order = userService.findOrder(userId, orderId);
-        return new ResponseEntity<>(order, HttpStatus.FOUND);
+        UserOrder order = orderService.findUserOrder(userId, orderId);
+        return EntityModel.of(
+                EntityConverter.convertOrderToDto(order),
+                linkTo(methodOn(UserController.class)
+                        .findAllOrders(userId, NumberUtils.INTEGER_ZERO,
+                                10, new PagedResourcesAssembler<>(null, null)))
+                        .withRel(USER_ORDERS)
+        );
     }
 }

@@ -1,6 +1,5 @@
 package com.epam.esm.entity;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -37,7 +36,6 @@ public class UserOrder {
     private BigDecimal cost;
 
     @Column(name = "purchase_date")
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd-MM-yyyy hh:mm:ss")
     private LocalDateTime purchaseDate;
 
     @ManyToOne
@@ -47,6 +45,10 @@ public class UserOrder {
     @ManyToOne
     @JoinColumn(name = "certificate_id", referencedColumnName = "id")
     private GiftCertificate certificate;
+
+    public UserOrder(GiftCertificate certificate) {
+        this.certificate = certificate;
+    }
 
     public UserOrder(User user, GiftCertificate certificate) {
         this.user = user;

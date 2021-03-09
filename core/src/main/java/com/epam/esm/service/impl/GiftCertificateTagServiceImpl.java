@@ -8,9 +8,12 @@ import com.epam.esm.entity.User;
 import com.epam.esm.entity.UserOrder;
 import com.epam.esm.exception.ResourceNotFoundException;
 import com.epam.esm.service.GiftCertificateTagService;
-import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.math.NumberUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,7 +30,6 @@ import java.util.stream.Collectors;
  * Gift certificate tag service implementation
  */
 @Log4j2
-@NoArgsConstructor
 @Service("giftCertificateTagService")
 @Transactional
 public class GiftCertificateTagServiceImpl extends GiftCertificateTagService {
@@ -46,15 +48,18 @@ public class GiftCertificateTagServiceImpl extends GiftCertificateTagService {
     @Override
     public GiftCertificateTag create(GiftCertificateTag tag) {
         Optional<GiftCertificateTag> optionalTag = tagDao.findByName(tag.getName());
-        return optionalTag.orElseGet(() -> tagDao.add(tag));
+        return optionalTag.orElseGet(() -> tagDao.save(tag));
     }
 
     @Override
-    public List<GiftCertificateTag> findAll(int currentPage) {
-        return tagDao.findAll(currentPage, GiftCertificateTag.class);
+    @Transactional(readOnly = true)
+    public Page<GiftCertificateTag> findAll(int currentPage, int pageSize) {
+        Pageable pageAndResultPerPage = PageRequest.of(currentPage, pageSize);
+        return tagDao.findAll(pageAndResultPerPage);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public GiftCertificateTag findById(long id) {
         GiftCertificateTag tag;
         Optional<GiftCertificateTag> optionalTag = tagDao.findById(id);
@@ -67,9 +72,11 @@ public class GiftCertificateTagServiceImpl extends GiftCertificateTagService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public GiftCertificateTag findMostProfitableTag() {
         GiftCertificateTag tag;
-        User user = userDao.findMostProfitableUser();
+        List<User> usersBySumOfOrders = userDao.findUsersBySumOfOrdersDesc();
+        User user = usersBySumOfOrders.get(NumberUtils.INTEGER_ZERO);
         List<GiftCertificateTag> tags = new ArrayList<>();
         Set<UserOrder> orders = user.getOrders();
         for (UserOrder order : orders) {
@@ -87,7 +94,8 @@ public class GiftCertificateTagServiceImpl extends GiftCertificateTagService {
     }
 
     @Override
-    public boolean delete(long id) {
-        return tagDao.delete(id);
+    public void delete(long id) {
+        Optional<GiftCertificateTag> optionalTag = tagDao.findById(id);
+        optionalTag.ifPresent(t -> tagDao.delete(t));
     }
 }

@@ -1,6 +1,5 @@
 package com.epam.esm.entity;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -20,11 +19,6 @@ import javax.persistence.OneToMany;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
-import javax.validation.constraints.DecimalMin;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -33,30 +27,21 @@ import java.util.Set;
  * Gift certificate resource
  */
 @Data
-@EqualsAndHashCode(exclude = {"tags", "orders"})
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "gift_certificate")
+@EqualsAndHashCode(exclude = {"tags", "orders"})
 public class GiftCertificate {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
-    @NotBlank(message = "Name is mandatory")
     private String name;
-
-    @NotBlank(message = "Description is mandatory")
     private String description;
-
-    @NotNull
-    @DecimalMin(value = "5.0")
-    @JsonFormat(shape = JsonFormat.Shape.NUMBER)
     private BigDecimal price;
 
-    @Min(1)
-    @NotNull
     private int duration;
 
     @Column(name = "create_date")
@@ -66,7 +51,6 @@ public class GiftCertificate {
     private LocalDateTime lastUpdateDate;
 
     @ManyToMany(fetch = FetchType.LAZY)
-    @NotEmpty(message = "Tag list cannot be empty")
     @JoinTable(
             name = "gift_certificate_tag",
             joinColumns = @JoinColumn(name = "gift_certificate_id"),
@@ -78,29 +62,15 @@ public class GiftCertificate {
     @OneToMany(mappedBy = "certificate")
     private Set<UserOrder> orders;
 
-    public GiftCertificate(@NotBlank(message = "Name is mandatory") String name,
-                           @NotBlank(message = "Description is mandatory") String description,
-                           @NotNull @DecimalMin(value = "5.0") BigDecimal price,
-                           @NotNull @Min(1) int duration) {
+    public GiftCertificate(String name,
+                           String description,
+                           BigDecimal price,
+                           int duration,
+                           Set<GiftCertificateTag> tags) {
         this.name = name;
         this.description = description;
         this.price = price;
         this.duration = duration;
-    }
-
-    public GiftCertificate(@NotBlank(message = "Name is mandatory") String name,
-                           @NotBlank(message = "Description is mandatory") String description,
-                           @NotNull @DecimalMin(value = "5.0") BigDecimal price,
-                           @NotNull @Min(1) int duration,
-                           LocalDateTime createDate,
-                           LocalDateTime lastUpdateDate,
-                           @NotEmpty(message = "Tag list cannot be empty") Set<GiftCertificateTag> tags) {
-        this.name = name;
-        this.description = description;
-        this.price = price;
-        this.duration = duration;
-        this.createDate = createDate;
-        this.lastUpdateDate = lastUpdateDate;
         this.tags = tags;
     }
 

@@ -2,7 +2,6 @@ package com.epam.esm.service;
 
 import com.epam.esm.dao.UserDao;
 import com.epam.esm.entity.User;
-import com.epam.esm.entity.UserOrder;
 import com.epam.esm.service.impl.UserServiceImpl;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
@@ -10,6 +9,12 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,13 +29,15 @@ class UserServiceTest {
     private UserDao dao;
     private List<User> users;
     private User user;
-    private List<UserOrder> orders;
-    private UserOrder order;
+    private Pageable pageAndResultPerPage;
+    private Page<User> userPage;
+    private PasswordEncoder passwordEncoder;
 
     @BeforeAll
     void beforeAll() {
         dao = mock(UserDao.class);
-        service = new UserServiceImpl(dao);
+        passwordEncoder = mock(PasswordEncoder.class);
+        service = new UserServiceImpl(dao, passwordEncoder);
     }
 
     @AfterAll
@@ -39,19 +46,22 @@ class UserServiceTest {
         dao = null;
         users = null;
         user = null;
-        orders = null;
-        order = null;
+        pageAndResultPerPage = null;
+        userPage = null;
     }
 
     @BeforeEach
-    void setUpStubUser() {
-        user = new User(0, "Stub");
+    void setUpCreateTest() {
+        user = new User("User", "password");
     }
 
     @Test
-    void createUnsupportedTest() {
-        Assertions.assertThrows(UnsupportedOperationException.class,
-                () -> service.create(user));
+    void createTest() {
+        when(dao.findByName("User")).thenReturn(Optional.of(user));
+        when(dao.save(user)).thenReturn(user);
+
+        final User createdUser = service.create(this.user);
+        Assertions.assertNotNull(createdUser);
     }
 
     @BeforeEach
@@ -59,12 +69,15 @@ class UserServiceTest {
         users = new ArrayList<>();
         user = new User(2, "Gleb");
         users.add(user);
+
+        pageAndResultPerPage = PageRequest.of(0, 10);
+        userPage = new PageImpl<>(users, pageAndResultPerPage, 5);
     }
 
     @Test
     void findAllTest() {
-        when(dao.findAll(1, User.class)).thenReturn(users);
-        List<User> allUsers = service.findAll(1);
+        when(dao.findAll(pageAndResultPerPage)).thenReturn(userPage);
+        Page<User> allUsers = service.findAll(0, 10);
         Assertions.assertFalse(allUsers.isEmpty());
     }
 
@@ -75,7 +88,7 @@ class UserServiceTest {
 
     @Test
     void findByIdTest() {
-        when(dao.findById(1)).thenReturn(Optional.of(user));
+        when(dao.findById(1L)).thenReturn(Optional.of(user));
         User actualUser = service.findById(1);
         Assertions.assertNotNull(actualUser);
     }
@@ -87,28 +100,15 @@ class UserServiceTest {
     }
 
     @BeforeEach
-    void setUpAllOrders() {
-        orders = new ArrayList<>();
-        UserOrder order = new UserOrder();
-        orders.add(order);
+    void setUpLoadUserByUsernameTest() {
+        user = new User("Username");
     }
 
     @Test
-    void findAllOrdersTest() {
-        when(dao.findAllOrders(1,1)).thenReturn(orders);
-        List<UserOrder> allOrders = service.findAllOrders(1, 1);
-        Assertions.assertFalse(allOrders.isEmpty());
-    }
+    void loadUserByUsernameTest() {
+        when(dao.findByName("Username")).thenReturn(Optional.of(user));
 
-    @BeforeEach
-    void setUpOrder() {
-        order = new UserOrder();
-    }
-
-    @Test
-    void findOrderTest() {
-        when(dao.findOrder(1,1)).thenReturn(Optional.of(order));
-        UserOrder actualOrder = service.findOrder(1, 1);
-        Assertions.assertNotNull(actualOrder);
+        final UserDetails userDetails = service.loadUserByUsername("Username");
+        Assertions.assertNotNull(userDetails);
     }
 }

@@ -7,8 +7,29 @@
         <groupId>com.epam.esm</groupId>
         <version>1.0.0</version>
     </parent>
+    <packaging>war</packaging>
     <artifactId>rest</artifactId>
     <modelVersion>4.0.0</modelVersion>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <fork>true</fork>
+                    <mainClass>com.epam.esm.SpringAppRunner</mainClass>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
     <!--=============================================={MODULES}=============================================-->
 
@@ -17,15 +38,14 @@
             <groupId>com.epam.esm</groupId>
             <artifactId>model</artifactId>
             <version>1.0.0</version>
-            <scope>compile</scope>
         </dependency>
 
         <dependency>
             <groupId>com.epam.esm</groupId>
             <artifactId>core</artifactId>
             <version>1.0.0</version>
-            <scope>compile</scope>
         </dependency>
+
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>

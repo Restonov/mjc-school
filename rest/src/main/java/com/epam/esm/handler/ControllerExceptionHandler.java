@@ -1,16 +1,18 @@
-package com.epam.esm.controller;
+package com.epam.esm.handler;
 
 import com.epam.esm.dto.ExceptionDto;
 import com.epam.esm.exception.ResourceNotFoundException;
+import com.epam.esm.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import org.postgresql.util.PSQLException;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.mvc.support.DefaultHandlerExceptionResolver;
 
@@ -29,6 +31,7 @@ public class ControllerExceptionHandler extends DefaultHandlerExceptionResolver 
     private static final int BAD_REQUEST_CUSTOM_CODE = 40005;
     private static final int NOT_ACCEPTABLE_CUSTOM_CODE = 40006;
     private static final int VALIDATION_CUSTOM_CODE = 40013;
+    private static final int FORBIDDEN_CUSTOM_CODE = 40300;
     private final MessageSource messageSource;
 
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -36,6 +39,28 @@ public class ControllerExceptionHandler extends DefaultHandlerExceptionResolver 
         String errorMessage = messageSource.getMessage((e.getMessage()), new Object[]{}, locale);
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                 new ExceptionDto(errorMessage, NOT_FOUND_CUSTOM_CODE)
+        );
+    }
+
+    @ExceptionHandler(ServiceException.class)
+    public ResponseEntity<ExceptionDto> serviceException(ServiceException e, Locale locale) {
+        String errorMessage = messageSource.getMessage((e.getMessage()), new Object[]{}, locale);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                new ExceptionDto(errorMessage, BAD_REQUEST_CUSTOM_CODE)
+        );
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ExceptionDto> accessDeniedException(AccessDeniedException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                new ExceptionDto(e.getMessage(), FORBIDDEN_CUSTOM_CODE)
+        );
+    }
+
+    @ExceptionHandler(HttpClientErrorException.Forbidden.class)
+    public ResponseEntity<ExceptionDto> forbiddenException(HttpClientErrorException.Forbidden e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                new ExceptionDto(e.getMessage(), FORBIDDEN_CUSTOM_CODE)
         );
     }
 

@@ -8,7 +8,6 @@ import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
@@ -19,29 +18,21 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor;
-import org.springframework.orm.jpa.JpaTransactionManager;
-import org.springframework.orm.jpa.JpaVendorAdapter;
-import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
-import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
-import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.criteria.CriteriaBuilder;
 import javax.sql.DataSource;
-import java.util.Properties;
 
 /**
- * Main app config
+ * Persistence configuration
  */
 @Configuration
 @Profile("dev")
 @RequiredArgsConstructor
 @EnableTransactionManagement
+@EnableJpaRepositories(basePackages = "com.epam.esm.dao")
 @PropertySource({"classpath:persistence.properties"})
 public class PersistenceConfiguration {
-    private static final String PACKAGES_TO_SCAN = "com.epam.esm.entity";
     @Value("${spring.datasource.url}")
     private String jdbcUrl;
     @Value("${spring.datasource.username}")
@@ -56,53 +47,6 @@ public class PersistenceConfiguration {
     private String cacheSizePrepStmts;
     @Value("${spring.datasource.prep-stmt-cache-limit}")
     private String cacheLimitPrepStmts;
-    @Value("${hibernate.dialect}")
-    private String hibernateDialect;
-    @Value("${hibernate.show_sql}")
-    private String hibernateShowSql;
-
-    /**
-     * Scan Entity packages and configure it for interaction via DB
-     *
-     * @return Entity manager
-     */
-    @Bean
-    public LocalContainerEntityManagerFactoryBean entityManagerFactory() {
-        LocalContainerEntityManagerFactoryBean entityManager =
-                new LocalContainerEntityManagerFactoryBean();
-        entityManager.setDataSource(dataSource());
-        entityManager.setPackagesToScan(PACKAGES_TO_SCAN);
-        JpaVendorAdapter adapter = new HibernateJpaVendorAdapter();
-        entityManager.setJpaVendorAdapter(adapter);
-        entityManager.setJpaProperties(hibernateProperties());
-        return entityManager;
-    }
-
-    /**
-     * Hibernate Criteria Builder for interaction via DB
-     *
-     * @param entityManager EntityManager
-     * @return CriteriaBuilder
-     */
-    @Bean
-    @Autowired
-    public CriteriaBuilder criteriaBuilder(EntityManager entityManager) {
-        return entityManager.getCriteriaBuilder();
-    }
-
-    /**
-     * Runs app transactions
-     *
-     * @param factory EntityManagerFactory
-     * @return transactionManager
-     */
-    @Bean
-    @Autowired
-    public PlatformTransactionManager transactionManager(final EntityManagerFactory factory) {
-        JpaTransactionManager transactionManager = new JpaTransactionManager();
-        transactionManager.setEntityManagerFactory(factory);
-        return transactionManager;
-    }
 
     /**
      * Exception i18n
@@ -163,17 +107,5 @@ public class PersistenceConfiguration {
         config.addDataSourceProperty("prepStmtCacheSize", cacheSizePrepStmts);
         config.addDataSourceProperty("prepStmtCacheSqlLimit", cacheLimitPrepStmts);
         return new HikariDataSource(config);
-    }
-
-    /**
-     * Properties for Entity manager
-     *
-     * @return hibernateProperties
-     */
-    private Properties hibernateProperties() {
-        Properties hibernateProp = new Properties();
-        hibernateProp.setProperty("hibernate.dialect", hibernateDialect);
-        hibernateProp.setProperty("hibernate.show_sql", hibernateShowSql);
-        return hibernateProp;
     }
 }
