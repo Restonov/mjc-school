@@ -10,6 +10,7 @@ import com.epam.esm.util.EntitySorter;
 import com.epam.esm.util.GiftCertificateUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.github.fge.jsonpatch.JsonPatch;
+import lombok.NoArgsConstructor;
 import lombok.SneakyThrows;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,6 +28,7 @@ import java.util.Set;
 /**
  * Gift certificate service implementation
  */
+@NoArgsConstructor
 @Transactional
 @Service("giftCertificateService")
 public class GiftCertificateServiceImpl extends GiftCertificateService {
@@ -152,7 +154,7 @@ public class GiftCertificateServiceImpl extends GiftCertificateService {
      * @param certificate Certificate
      * @return Tags set
      */
-    public Set<GiftCertificateTag> createCertificateTagRelation(GiftCertificate certificate) {
+    private Set<GiftCertificateTag> createCertificateTagRelation(GiftCertificate certificate) {
         Set<GiftCertificateTag> currentDtoTags = certificate.getTags();
         Set<GiftCertificateTag> entityTags = new HashSet<>();
         for (GiftCertificateTag tag : currentDtoTags) {

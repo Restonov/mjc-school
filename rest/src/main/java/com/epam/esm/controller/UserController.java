@@ -1,6 +1,5 @@
 package com.epam.esm.controller;
 
-import com.epam.esm.dto.PagedModelDto;
 import com.epam.esm.dto.UserDto;
 import com.epam.esm.dto.UserOrderDto;
 import com.epam.esm.entity.User;
@@ -14,8 +13,10 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -82,11 +83,11 @@ public class UserController {
      * @return List of Users
      */
     @GetMapping(params = {"page"})
-    public PagedModelDto findAllUsers(@RequestParam @Min(0) int page,
-                                      @RequestParam(required = false, defaultValue = "10") @Min(1) int size,
-                                      PagedResourcesAssembler<User> assembler) {
+    public ResponseEntity<PagedModel<?>> findAllUsers(@RequestParam @Min(0) int page,
+                                                      @RequestParam(required = false, defaultValue = "10") @Min(1) int size,
+                                                      PagedResourcesAssembler<User> assembler) {
         Page<User> users = userService.findAll(page, size);
-        return new PagedModelDto(
+        return new ResponseEntity<>(
                 assembler.toModel(users),
                 HttpStatus.FOUND
         );
@@ -124,12 +125,12 @@ public class UserController {
      */
     @GetMapping("/{userId}/orders")
     @PreAuthorize("@userAccessVerification.verifyLoggedUser(@userServiceImpl.findById(#userId))")
-    public PagedModelDto findAllOrders(@PathVariable @Min(1) long userId,
+    public ResponseEntity<PagedModel<?>> findAllOrders(@PathVariable @Min(1) long userId,
                                                        @RequestParam @Min(0) int page,
                                                        @RequestParam(required = false, defaultValue = "10") @Min(1) int size,
                                                        PagedResourcesAssembler<UserOrder> assembler) {
         Page<UserOrder> orders = orderService.findUserOrders(page,size, userId);
-        return new PagedModelDto(
+        return new ResponseEntity<>(
                 assembler.toModel(orders),
                 HttpStatus.FOUND
         );

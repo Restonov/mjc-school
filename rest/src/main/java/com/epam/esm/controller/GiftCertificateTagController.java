@@ -1,7 +1,6 @@
 package com.epam.esm.controller;
 
 import com.epam.esm.dto.GiftCertificateTagDto;
-import com.epam.esm.dto.PagedModelDto;
 import com.epam.esm.entity.Constants;
 import com.epam.esm.entity.GiftCertificateTag;
 import com.epam.esm.service.GiftCertificateTagService;
@@ -12,6 +11,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.data.domain.Page;
 import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.PagedModel;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -69,11 +69,11 @@ public class GiftCertificateTagController {
      * @return List of Tags
      */
     @GetMapping(params = {"page"})
-    public PagedModelDto findAll(@RequestParam @Min(0) int page,
-                                 @RequestParam(required = false, defaultValue = "10") @Min(1) int size,
-                                 PagedResourcesAssembler<GiftCertificateTag> assembler) {
+    public ResponseEntity<PagedModel<?>> findAll(@RequestParam @Min(0) int page,
+                                                 @RequestParam(required = false, defaultValue = "10") @Min(1) int size,
+                                                 PagedResourcesAssembler<GiftCertificateTag> assembler) {
         Page<GiftCertificateTag> tags = service.findAll(page, size);
-        return new PagedModelDto(
+        return new ResponseEntity<>(
                 assembler.toModel(tags),
                 HttpStatus.FOUND
         );

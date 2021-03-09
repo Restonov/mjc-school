@@ -47,10 +47,10 @@ public class User implements UserDetails {
 
     @JsonIgnore
     @OneToMany(mappedBy = "user")
-    private transient Set<UserOrder> orders;
+    private Set<UserOrder> orders;
 
     public enum Role {
-        ROLE_USER
+        ROLE_USER, ROLE_ADMINISTRATOR
     }
 
     public User(long id) {

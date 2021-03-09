@@ -33,7 +33,7 @@ import static com.epam.esm.entity.Constants.SIGNING_KEY;
 public class JwtTokenProcessor implements Serializable {
     private static final String REGEX_DELIMITER = ",";
     private static final String BLANK = "";
-    private final transient AuthenticationManager authenticationManager;
+    private final AuthenticationManager authenticationManager;
 
     public String generateToken(UserFormDto form) {
         final Authentication authentication = authenticationManager.authenticate(

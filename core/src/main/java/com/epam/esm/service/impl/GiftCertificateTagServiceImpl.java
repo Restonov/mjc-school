@@ -8,6 +8,7 @@ import com.epam.esm.entity.User;
 import com.epam.esm.entity.UserOrder;
 import com.epam.esm.exception.ResourceNotFoundException;
 import com.epam.esm.service.GiftCertificateTagService;
+import lombok.NoArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.math.NumberUtils;
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
  * Gift certificate tag service implementation
  */
 @Log4j2
+@NoArgsConstructor
 @Service("giftCertificateTagService")
 @Transactional
 public class GiftCertificateTagServiceImpl extends GiftCertificateTagService {

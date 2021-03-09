@@ -12,6 +12,7 @@ public final class Constants {
      */
     public static final String AUTH_URL = "/api/auth";
     public static final String CERTIFICATES_URL = "/api/certificates";
+    public static final String SHUTDOWN_URL = "/api/shutdown";
     public static final String CERTIFICATE_BY_ID_URL = "/api/certificates/{certificateId}";
     public static final String TAGS_URL = "/api/tags";
     public static final String USERS_URL = "/api/users";
@@ -62,4 +63,5 @@ public final class Constants {
     public static final String AUTHORITIES_KEY = "scopes";
     public static final String GENERATED_JWT = "Generated JWT";
     public static final String TOKEN_GENERATED_MESSAGE = "Token was successfully generated";
+    public static final String APP_SHUTDOWN_MESSAGE = "App was successfully shut down";
 }
