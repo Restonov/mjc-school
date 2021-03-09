@@ -1,6 +1,7 @@
 package com.epam.esm.controller;
 
 import com.epam.esm.dto.GiftCertificateDto;
+import com.epam.esm.dto.PagedModelDto;
 import com.epam.esm.entity.Constants;
 import com.epam.esm.entity.GiftCertificate;
 import com.epam.esm.service.GiftCertificateService;
@@ -11,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.hateoas.EntityModel;
-import org.springframework.hateoas.PagedModel;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -71,11 +71,11 @@ public class GiftCertificateController {
      * @return List of Certificates
      */
     @GetMapping()
-    public ResponseEntity<PagedModel<?>> findAll(@RequestParam(required = false, defaultValue = "0") @Min(0) int page,
-                                                 @RequestParam(required = false, defaultValue = "10") @Min(1) int size,
-                                                 PagedResourcesAssembler<GiftCertificate> assembler) {
+    public PagedModelDto findAll(@RequestParam(required = false, defaultValue = "0") @Min(0) int page,
+                                 @RequestParam(required = false, defaultValue = "10") @Min(1) int size,
+                                 PagedResourcesAssembler<GiftCertificate> assembler) {
         Page<GiftCertificate> certificates = service.findAll(page, size);
-        return new ResponseEntity<>(
+        return new PagedModelDto(
                 assembler.toModel(certificates),
                 HttpStatus.FOUND
         );
@@ -89,12 +89,12 @@ public class GiftCertificateController {
      * @return List of Certificates
      */
     @GetMapping(params = {"page", "sort"})
-    public ResponseEntity<PagedModel<?>> findAllAndSort(@RequestParam @Min(0) int page,
+    public PagedModelDto findAllAndSort(@RequestParam @Min(0) int page,
                                                         @RequestParam(required = false, defaultValue = "10") @Min(1) int size,
                                                         @RequestParam String sort,
                                                         PagedResourcesAssembler<GiftCertificate> assembler) {
         Page<GiftCertificate> certificates = service.findAllAndSort(page, size, sort);
-        return new ResponseEntity<>(
+        return new PagedModelDto(
                 assembler.toModel(certificates),
                 HttpStatus.FOUND
         );
@@ -127,18 +127,18 @@ public class GiftCertificateController {
     }
 
     /**
-     * Find Certificate by tag name
+     * Find Certificate by tag name meth
      *
      * @param tags name of the Tag
      * @return Certificates contains this Tag
      */
     @GetMapping(params = {"page", "tags"})
-    public ResponseEntity<PagedModel<?>> findByTagName(@RequestParam @Min(0) int page,
+    public PagedModelDto findByTagName(@RequestParam @Min(0) int page,
                                                        @RequestParam(required = false, defaultValue = "10") @Min(1) int size,
                                                        @RequestParam String[] tags,
                                                        PagedResourcesAssembler<GiftCertificate> assembler) {
         Page<GiftCertificate> certificates = service.findByTagNames(page, size, tags);
-        return new ResponseEntity<>(
+        return new PagedModelDto(
                 assembler.toModel(certificates),
                 HttpStatus.FOUND
         );
@@ -152,12 +152,12 @@ public class GiftCertificateController {
      * @return List of Certificates
      */
     @GetMapping(params = {"search", "page"})
-    public ResponseEntity<PagedModel<?>> findByKeyWord(@RequestParam String search,
+    public PagedModelDto findByKeyWord(@RequestParam String search,
                                                        @RequestParam @Min(0) int page,
                                                        @RequestParam(required = false, defaultValue = "10") @Min(1) int size,
                                                        PagedResourcesAssembler<GiftCertificate> assembler) {
         Page<GiftCertificate> certificates = service.findByKeyWord(page, size, search);
-        return new ResponseEntity<>(
+        return new PagedModelDto(
                 assembler.toModel(certificates),
                 HttpStatus.FOUND
         );

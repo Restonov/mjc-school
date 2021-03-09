@@ -18,9 +18,10 @@
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
     <version>2.4.2</version>
+    <relativePath/>
   </parent>
 
-  <name>gift-certificate</name>
+  <name>giftCertificateSystem</name>
   <url>http://www.epam.com</url>
 
   <properties>
@@ -31,6 +32,31 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <servlet.version>4.0.1</servlet.version>
   </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.8.4</version>
+        <executions>
+          <execution>
+            <id>pre-unit-test</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>test</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 
   <dependencies>
 
@@ -79,6 +105,12 @@
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-oauth2-jose</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-tomcat</artifactId>
+      <scope>provided</scope>
     </dependency>
 
     <!--============================================={JSON}================================================-->
@@ -155,6 +187,20 @@
       <version>42.2.18</version>
     </dependency>
 
+    <!-- https://mvnrepository.com/artifact/org.flywaydb/flyway-core -->
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-core</artifactId>
+      <version>7.5.0</version>
+    </dependency>
+
+    <!-- https://mvnrepository.com/artifact/com.opentable.components/otj-pg-embedded -->
+    <dependency>
+      <groupId>com.opentable.components</groupId>
+      <artifactId>otj-pg-embedded</artifactId>
+      <version>0.13.1</version>
+    </dependency>
+
     <!--====================================={Collections}============================================-->
 
     <!-- https://mvnrepository.com/artifact/commons-collections/commons-collections -->
@@ -166,11 +212,11 @@
 
     <!--====================================={Annotations}============================================-->
 
+    <!-- https://mvnrepository.com/artifact/org.jetbrains/annotations -->
     <dependency>
       <groupId>org.jetbrains</groupId>
       <artifactId>annotations</artifactId>
       <version>20.1.0</version>
-      <scope>compile</scope>
     </dependency>
 
     <!--========================================{Test}================================================-->

@@ -28,7 +28,7 @@ import javax.annotation.Resource;
 import static com.epam.esm.entity.Constants.ADMINISTRATOR;
 import static com.epam.esm.entity.Constants.AUTH_GENERATE_TOKEN_URL;
 import static com.epam.esm.entity.Constants.AUTH_SIGNUP_URL;
-import static com.epam.esm.entity.Constants.SHUTDOWN_URL;
+import static com.epam.esm.entity.Constants.CERTIFICATES_URL;
 import static com.epam.esm.entity.Constants.CERTIFICATE_BY_ID_URL;
 import static com.epam.esm.entity.Constants.CREATE_USER_ORDER_URL;
 import static com.epam.esm.entity.Constants.MOST_PROFIT_TAG_URL;
@@ -91,7 +91,7 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
                 .authorizeRequests()
                 .antMatchers(HttpMethod.POST, AUTH_SIGNUP_URL).anonymous()
                 .antMatchers(AUTH_GENERATE_TOKEN_URL).permitAll()
-                .antMatchers(HttpMethod.GET, SHUTDOWN_URL).permitAll()
+                .antMatchers(HttpMethod.GET, CERTIFICATES_URL).permitAll()
                 .antMatchers(HttpMethod.GET, CERTIFICATE_BY_ID_URL).permitAll()
                 .antMatchers(HttpMethod.GET, MOST_PROFIT_TAG_URL).hasRole(ADMINISTRATOR)
                 .antMatchers(HttpMethod.GET).hasAnyRole(USER, ADMINISTRATOR)

@@ -4,11 +4,13 @@
   <code>Rest</code>
   <code>Spring Data</code>
   <code>Spring Security</code>
-  <code>Amazon Web services</code>
+  <code>Jenkins</code>
+  <code>SonarQube</code>
+  <code>Jacoco</code>
 </p>
 
 # GiftCertificateSystem
-Advanced REST + Spring Security + mvn install executable JAR build + AWS RDS
+Advanced REST + Spring Security + mvn package non-executable WAR for Jenkins+SonarQube integration
 
 
 

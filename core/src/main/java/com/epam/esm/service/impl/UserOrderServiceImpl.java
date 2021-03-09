@@ -20,6 +20,7 @@ import java.util.Optional;
 @Service
 @Transactional
 public class UserOrderServiceImpl extends UserOrderService {
+    private static final String USER_NOT_FOUND = "user.not.found";
 
     /**
      * Constructor for test purposes
@@ -37,18 +38,18 @@ public class UserOrderServiceImpl extends UserOrderService {
     }
 
     @Override
-    public UserOrder create(UserOrder orderDto) {
+    public UserOrder create(UserOrder order) {
         UserOrder newOrder;
-        long userId = orderDto.getUser().getId();
+        long userId = order.getUser().getId();
         final Optional<User> optionalUser = userDao.findById(userId);
-        User user = optionalUser.orElseThrow(() -> new ServiceException("user.not.found"));
-        long certificateId = orderDto.getCertificate().getId();
+        User user = optionalUser.orElseThrow(() -> new ServiceException(USER_NOT_FOUND));
+        long certificateId = order.getCertificate().getId();
             Optional<GiftCertificate> optionalCert = certificateDao.findById(certificateId);
             if (optionalCert.isPresent()) {
-                orderDto.setUser(user);
-                orderDto.setCertificate(optionalCert.get());
-                orderDto.setCost(optionalCert.get().getPrice());
-                newOrder = orderDao.save(orderDto);
+                order.setUser(user);
+                order.setCertificate(optionalCert.get());
+                order.setCost(optionalCert.get().getPrice());
+                newOrder = orderDao.save(order);
             } else {
                 throw new ResourceNotFoundException("certificate.not.found");
             }
@@ -59,7 +60,7 @@ public class UserOrderServiceImpl extends UserOrderService {
     @Transactional(readOnly = true)
     public Page<UserOrder> findUserOrders(int currentPage, int pageSize, long userId) {
         final Optional<User> optionalUser = userDao.findById(userId);
-        User user = optionalUser.orElseThrow(() -> new ServiceException("user.not.found"));
+        User user = optionalUser.orElseThrow(() -> new ServiceException(USER_NOT_FOUND));
         Pageable pageAndResultPerPage = PageRequest.of(currentPage, pageSize);
         return orderDao.findAllByUser(user, pageAndResultPerPage);
     }
@@ -68,7 +69,7 @@ public class UserOrderServiceImpl extends UserOrderService {
     @Transactional(readOnly = true)
     public UserOrder findUserOrder(long userId, long orderId) {
         final Optional<User> optionalUser = userDao.findById(userId);
-        User user = optionalUser.orElseThrow(() -> new ServiceException("user.not.found"));
+        User user = optionalUser.orElseThrow(() -> new ServiceException(USER_NOT_FOUND));
         final Optional<UserOrder> optionalOrder = orderDao.findByIdAndUser(orderId, user);
         return optionalOrder.orElseThrow(() -> new ResourceNotFoundException("order.not.found"));
     }
